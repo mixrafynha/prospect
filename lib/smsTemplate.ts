@@ -4,19 +4,10 @@ export function buildSmsMessage(lead: Pick<Lead, "name" | "address" | "website">
   const hasWebsite = Boolean(lead.website);
 
   if (hasWebsite) {
-    return [
-      `Bonjour ${lead.name},`,
-      "J’ai aimé votre présence en ligne — on sent une vraie activité derrière votre business.",
-      `J’ai vu votre site ici : ${lead.website}`,
-      "Je peux vous montrer rapidement 2 ou 3 idées simples pour le rendre encore plus clair et plus efficace.",
-    ].join("\n\n");
+    return "Bonjour, j’ai analysé votre site web et j’ai remarqué quelques points à améliorer.";
   }
 
-  return [
-    `Bonjour ${lead.name},`,
-    "J’ai vu que vous n’avez pas encore de site. J’ai une petite idée qui pourrait vous apporter plus de clients.",
-    "Je peux vous la montrer gratuitement ?",
-  ].join("\n\n");
+  return "Bonjour, j’ai vu que vous n’avez pas encore de site web et je pense que cela pourrait vous apporter plus de clients.";
 }
 
 export function buildSmsLink(

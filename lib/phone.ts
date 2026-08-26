@@ -101,6 +101,7 @@ export function findPhonesInText(html: string, source: PhoneNumberData["source"]
 export function dedupePhones(phones: PhoneNumberData[]) {
   const deduped = new Map<string, PhoneNumberData>();
   for (const phone of phones) {
+    if (!phone.valid || !phone.normalizedE164) continue;
     const key = phone.normalizedE164 || phone.original.toLowerCase();
     if (!deduped.has(key)) deduped.set(key, phone);
   }
