@@ -1,0 +1,29 @@
+{
+  "name": "weak-site-finder-bulk",
+  "version": "2.0.0",
+  "private": true,
+  "scripts": {
+    "dev": "next dev --webpack",
+    "dev:turbo": "next dev --turbopack",
+    "build": "next build --webpack",
+    "start": "next start",
+    "typecheck": "tsc --noEmit",
+    "clean": "node -e \"const fs=require('fs'); for (const p of ['.next','tsconfig.tsbuildinfo']) fs.rmSync(p,{recursive:true,force:true})\""
+  },
+  "dependencies": {
+    "libphonenumber-js": "^1.13.11",
+    "lucide-react": "^0.468.0",
+    "next": "16.2.9",
+    "qrcode": "^1.5.4",
+    "react": "19.2.7",
+    "react-dom": "19.2.7",
+    "resend": "^6.6.0"
+  },
+  "devDependencies": {
+    "@types/node": "^20.17.10",
+    "@types/qrcode": "^1.5.6",
+    "@types/react": "^19.0.2",
+    "@types/react-dom": "^19.0.2",
+    "typescript": "^5.7.2"
+  }
+}
