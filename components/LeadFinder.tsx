@@ -6,11 +6,11 @@ import type { Lead } from "@/lib/types";
 import SiteHeader from "@/components/SiteHeader";
 
 const presets = [
-  "coiffeur Paris 13",
-  "institut de beauté Paris",
-  "restaurant Paris",
-  "barbier Paris",
-  "garage automobile Paris"
+  "coiffeur Rennes",
+  "institut de beauté Lyon 3",
+  "restaurant Marseille 6",
+  "barbier Lille",
+  "garage automobile Bordeaux"
 ];
 
 function csvEscape(value: unknown) {
@@ -33,7 +33,10 @@ function outreachUrl(lead: Lead) {
 }
 
 export default function LeadFinder() {
-  const [query, setQuery] = useState("coiffeur Paris 13");
+  const [query, setQuery] = useState("coiffeur Rennes");
+  const [location, setLocation] = useState("Rennes");
+  const [radius, setRadius] = useState(5000);
+  const [activeSearchLocation, setActiveSearchLocation] = useState<{ label: string; radiusMeters: number } | null>(null);
   const [leads, setLeads] = useState<Lead[]>([]);
   const [loading, setLoading] = useState(false);
   const [error, setError] = useState("");
@@ -54,11 +57,12 @@ export default function LeadFinder() {
       const response = await fetch("/api/find-sites", {
         method: "POST",
         headers: { "Content-Type": "application/json" },
-        body: JSON.stringify({ query: clean })
+        body: JSON.stringify({ query: clean, locationText: location, radius })
       });
       const data = await response.json();
       if (!response.ok) throw new Error(data.error || "Erro ao procurar leads.");
       setLeads(data.leads || []);
+      setActiveSearchLocation(data.location?.label ? { label: data.location.label, radiusMeters: data.location.radiusMeters || radius } : { label: location, radiusMeters: radius });
     } catch (err) {
       setError(err instanceof Error ? err.message : "Erro desconhecido.");
     } finally {
@@ -109,12 +113,23 @@ export default function LeadFinder() {
                   value={query}
                   onChange={(event) => setQuery(event.target.value)}
                   onKeyDown={(event) => event.key === "Enter" && runSearch()}
-                  placeholder="Ex: coiffeur Paris 13"
+                  placeholder="Ex: coiffeur Rennes"
                 />
                 <button className="btn" onClick={() => runSearch()} disabled={loading}>
                   {loading ? "A analisar..." : <><Search size={18} /> Procurar</>}
                 </button>
               </div>
+              <div className="search-card" style={{ marginTop: 12 }}>
+                <input className="input" value={location} onChange={(event) => setLocation(event.target.value)} placeholder="Localização: Rennes, 75013, Lyon 3" />
+                <select className="input" value={radius} onChange={(event) => setRadius(Number(event.target.value))}>
+                  <option value={2000}>2 km</option>
+                  <option value={5000}>5 km</option>
+                  <option value={10000}>10 km</option>
+                  <option value={20000}>20 km</option>
+                  <option value={50000}>50 km</option>
+                </select>
+              </div>
+              {activeSearchLocation ? <p className="muted">Pesquisa ativa: {activeSearchLocation.label} · {Math.round(activeSearchLocation.radiusMeters / 1000)} km</p> : null}
 
               <div className="quick">
                 {presets.map((preset) => (

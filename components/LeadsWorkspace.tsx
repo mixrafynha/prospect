@@ -85,8 +85,10 @@ function statusLabel(status: LeadStatus) {
 }
 
 export default function LeadsWorkspace() {
-  const [query, setQuery] = useState("Institut de beauté Paris");
-  const [location, setLocation] = useState("Paris");
+  const [query, setQuery] = useState("Institut de beauté");
+  const [location, setLocation] = useState("Rennes");
+  const [radius, setRadius] = useState(5000);
+  const [activeSearchLocation, setActiveSearchLocation] = useState<{ label: string; radiusMeters: number; latitude: number | null; longitude: number | null } | null>(null);
   const [loading, setLoading] = useState(false);
   const [step, setStep] = useState("Ready to search.");
   const [leads, setLeads] = useState<Lead[]>([]);
@@ -144,11 +146,16 @@ export default function LeadsWorkspace() {
       const response = await fetch("/api/find-sites", {
         method: "POST",
         headers: { "Content-Type": "application/json" },
-        body: JSON.stringify({ query: `${query} ${location}`.trim(), detectEmails: true }),
+        body: JSON.stringify({ query, locationText: location, radius, detectEmails: true }),
       });
       const data = await response.json();
       if (!response.ok) throw new Error(data.error || "Erro ao procurar leads");
       setLeads(data.leads || []);
+      setActiveSearchLocation(
+        data.location?.label
+          ? { label: data.location.label, radiusMeters: data.location.radiusMeters || radius, latitude: data.location.latitude ?? null, longitude: data.location.longitude ?? null }
+          : { label: location, radiusMeters: radius, latitude: null, longitude: null }
+      );
       setStep(`Found ${data.leads?.length || 0} businesses.`);
     } catch (err) {
       setError(err instanceof Error ? err.message : "Erro desconhecido");
@@ -348,7 +355,17 @@ export default function LeadsWorkspace() {
               </div>
               <div className="search-field">
                 <label>Location</label>
-                <input className="input" value={location} onChange={(e) => setLocation(e.target.value)} placeholder="Paris" onKeyDown={(e) => e.key === "Enter" && searchLeads()} />
+                <input className="input" value={location} onChange={(e) => setLocation(e.target.value)} placeholder="Rennes, 75013, Lyon 3" onKeyDown={(e) => e.key === "Enter" && searchLeads()} />
+              </div>
+              <div className="search-field">
+                <label>Radius</label>
+                <select className="input" value={radius} onChange={(e) => setRadius(Number(e.target.value))}>
+                  <option value={2000}>2 km</option>
+                  <option value={5000}>5 km</option>
+                  <option value={10000}>10 km</option>
+                  <option value={20000}>20 km</option>
+                  <option value={50000}>50 km</option>
+                </select>
               </div>
               <button className="button gold" onClick={searchLeads} disabled={loading}>
                 <Search size={16} /> {loading ? "Searching..." : "Search"}
@@ -359,8 +376,16 @@ export default function LeadsWorkspace() {
           <Reveal delay={180}>
             <div className="progress-strip">
               <span>{step}</span>
-              <strong>{stats.total} results</strong>
+              <strong>{stats.total} results{activeSearchLocation ? ` · ${activeSearchLocation.label} · ${Math.round(activeSearchLocation.radiusMeters / 1000)} km` : ""}</strong>
             </div>
+            {activeSearchLocation ? (
+              <div className="progress-strip" style={{ marginTop: 10 }}>
+                <span>Localização ativa</span>
+                <strong>
+                  {activeSearchLocation.label} · Lat: {activeSearchLocation.latitude ?? "—"} · Lng: {activeSearchLocation.longitude ?? "—"} · Raio: {Math.round(activeSearchLocation.radiusMeters / 1000)} km
+                </strong>
+              </div>
+            ) : null}
           </Reveal>
         </section>
 
