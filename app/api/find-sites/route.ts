@@ -63,6 +63,7 @@ type LocationResolutionAttempt = {
 const GOOGLE_API_KEY = process.env.GOOGLE_API_KEY || "";
 const MAX_PAGES = 3;
 const PAGE_SIZE = 15;
+const LEAD_CONCURRENCY = 4;
 const DEFAULT_RADIUS_METERS = 5000;
 const ALLOWED_RADIUS_METERS = new Set([2000, 5000, 10000, 20000, 50000]);
 
@@ -506,9 +507,7 @@ export async function POST(request: Request) {
       center: location ? { lat: location.latitude, lng: location.longitude } : null,
       radiusKm,
     });
-    const leads: Lead[] = [];
-
-    for (const [index, place] of places.entries()) {
+    async function processPlace(place: GooglePlace, index: number): Promise<Lead> {
       const name = place.displayName?.text || "Sem nome";
       const website = place.websiteUri || "";
       logStep(`Processing ${index + 1}/${places.length}`, { name, website: website || "sem site" });
@@ -546,7 +545,14 @@ export async function POST(request: Request) {
         ...metrics,
       };
 
-      leads.push({ ...base, ...buildWeakScore(base) });
+      return { ...base, ...buildWeakScore(base) };
+    }
+
+    const leads: Lead[] = [];
+    for (let start = 0; start < places.length; start += LEAD_CONCURRENCY) {
+      const batch = places.slice(start, start + LEAD_CONCURRENCY);
+      const processed = await Promise.all(batch.map((place, offset) => processPlace(place, start + offset)));
+      leads.push(...processed);
     }
 
     const deduped = dedupeLeads(leads);
