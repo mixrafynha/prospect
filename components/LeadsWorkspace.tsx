@@ -65,6 +65,32 @@ function saveSelectedLeadKey(value: string) {
   localStorage.setItem("selected-lead-key", value);
 }
 
+const SESSION_KEY = "leads-workspace-session-v1";
+
+type WorkspaceSession = {
+  query?: string;
+  location?: string;
+  radius?: number;
+  leads?: Lead[];
+  step?: string;
+  error?: string;
+  activeSearchLocation?: { label: string; radiusMeters: number; latitude: number | null; longitude: number | null } | null;
+};
+
+function loadWorkspaceSession(): WorkspaceSession {
+  if (typeof window === "undefined") return {};
+  try {
+    return JSON.parse(sessionStorage.getItem(SESSION_KEY) || "{}") as WorkspaceSession;
+  } catch {
+    return {};
+  }
+}
+
+function saveWorkspaceSession(value: WorkspaceSession) {
+  if (typeof window === "undefined") return;
+  sessionStorage.setItem(SESSION_KEY, JSON.stringify(value));
+}
+
 function leadKey(lead: Lead) {
   if (lead.placeId) return `place:${lead.placeId}`;
   const phone = lead.phones.find((item) => item.normalizedE164)?.normalizedE164;
@@ -104,6 +130,21 @@ export default function LeadsWorkspace() {
   const [messageCopied, setMessageCopied] = useState(false);
   const [numberCopied, setNumberCopied] = useState(false);
   const [isDesktop, setIsDesktop] = useState(true);
+
+  useEffect(() => {
+    const session = loadWorkspaceSession();
+    if (session.query) setQuery(session.query);
+    if (session.location) setLocation(session.location);
+    if (typeof session.radius === "number") setRadius(session.radius);
+    if (Array.isArray(session.leads)) setLeads(session.leads);
+    if (session.step) setStep(session.step);
+    if (session.error) setError(session.error);
+    if (session.activeSearchLocation !== undefined) setActiveSearchLocation(session.activeSearchLocation || null);
+  }, []);
+
+  useEffect(() => {
+    saveWorkspaceSession({ query, location, radius, leads, step, error, activeSearchLocation });
+  }, [query, location, radius, leads, step, error, activeSearchLocation]);
 
   const filtered = useMemo(() => {
     const rows = [...leads];
