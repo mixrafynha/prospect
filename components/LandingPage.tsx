@@ -29,17 +29,6 @@ const steps = [
   },
 ];
 
-const demoRows = [
-  { name: "Institut Belle Paris", rating: "4.8", reviews: "243", phone: "06 12 34 56 78", website: true, source: "GOOGLE", opportunity: "HIGH" },
-  { name: "Studio Beauté", rating: "4.7", reviews: "189", phone: "07 45 67 89 10", website: true, source: "WEBSITE", opportunity: "HIGH" },
-  { name: "Salon Lumière", rating: "4.3", reviews: "71", phone: "01 42 00 00 00", website: false, source: "GOOGLE", opportunity: "MEDIUM" },
-];
-
-function DemoPhone({ value }: { value: string }) {
-  const isMobile = value.startsWith("06") || value.startsWith("07");
-  return <span className={isMobile ? "phone-pill mobile" : "phone-pill"}>{value}</span>;
-}
-
 export default function LandingPage() {
   return (
     <main className="landing">
@@ -57,16 +46,6 @@ export default function LandingPage() {
 
         <Reveal className="hero-demo" delay={140}>
           <div className="hero-visual hero-visual-pharow">
-            <div className="hero-visual-head">
-              <div>
-                <span>Search</span>
-                <strong>Institut de beauté</strong>
-              </div>
-              <div>
-                <span>Location</span>
-                <strong>Paris</strong>
-              </div>
-            </div>
             <div className="hero-visual-grid">
               <div className="hero-visual-image">
                 <Image src="/landing-hero-v2.webp" alt="Product preview" fill priority sizes="(max-width: 900px) 100vw, 56vw" />
@@ -112,32 +91,15 @@ export default function LandingPage() {
           </div>
         </Reveal>
         <Reveal>
-          <div className="showcase-shell">
-            <div className="showcase-top">
-              <span>SEARCH</span><span>RESULTS</span><span>CONTACTS</span><span>OPPORTUNITIES</span>
-            </div>
-            <div className="showcase-panels">
-              <div className="showcase-panel">
-                <label>Business</label>
-                <div className="fake-input">Institut de beauté</div>
-                <label>Location</label>
-                <div className="fake-input">Paris 13</div>
-              </div>
-              <div className="showcase-panel results">
-                {demoRows.slice(0, 2).map((row) => (
-                  <div key={row.name} className="showcase-result">
-                    <div>
-                      <strong>{row.name}</strong>
-                      <div className="sub">{row.rating} ★ · {row.reviews} reviews</div>
-                    </div>
-                    <div className="showcase-contact">
-                      <DemoPhone value={row.phone} />
-                      <span className="badge-chip">{row.source}</span>
-                    </div>
-                  </div>
-                ))}
-              </div>
-            </div>
+          <div className="showcase-frame">
+            <Image
+              src="/landing-showcase.webp"
+              alt="Prospecting dashboard preview"
+              fill
+              priority
+              className="showcase-image"
+              sizes="(max-width: 900px) 100vw, 92vw"
+            />
           </div>
         </Reveal>
       </section>

@@ -1,15 +1,15 @@
 "use client";
 
 import Link from "next/link";
-import { Menu, Sparkles, X } from "lucide-react";
+import { HelpCircle, MessageCircle, Search, Sparkles, X, Zap } from "lucide-react";
 import { useEffect, useState } from "react";
-import { usePathname, useRouter } from "next/navigation";
+import { usePathname } from "next/navigation";
 
 const LINKS = [
-  { name: "Product", href: "/#product" },
-  { name: "How it works", href: "/#how-it-works" },
-  { name: "Pricing", href: "/#pricing" },
-  { name: "FAQ", href: "/#faq" },
+  { name: "Product", href: "/#product", icon: Zap },
+  { name: "How it works", href: "/#how-it-works", icon: Search },
+  { name: "Pricing", href: "/#pricing", icon: MessageCircle },
+  { name: "FAQ", href: "/#faq", icon: HelpCircle },
 ];
 
 export default function SiteHeader() {
@@ -40,15 +40,21 @@ export default function SiteHeader() {
               type="button"
               aria-label="Toggle menu"
               aria-expanded={open}
+              aria-controls="mobile-site-menu"
               onClick={() => setOpen((value) => !value)}
               className="topbar-menu-btn"
             >
-              {open ? <X size={20} /> : <Menu size={20} />}
+              <span className={open ? "hamburger open" : "hamburger"} aria-hidden="true">
+                <span />
+                <span />
+                <span />
+              </span>
+              <span className="sr-only">{open ? "Close menu" : "Open menu"}</span>
             </button>
 
             <Link href="/" className="brand">
-              <span className="brand-mark"><Sparkles size={16} /></span>
-              <span>Lead Studio</span>
+              <span className="brand-mark"><MessageCircle size={16} /></span>
+              <span>PROSPECT</span>
             </Link>
           </div>
 
@@ -67,13 +73,38 @@ export default function SiteHeader() {
         </div>
       </nav>
 
+      <nav className="mobile-topbar" aria-label="Mobile navigation">
+        <div className="mobile-topbar-brand">
+          <Link href="/" className="brand" onClick={() => setOpen(false)}>
+            <span className="brand-mark"><MessageCircle size={16} /></span>
+            <span>PROSPECT</span>
+          </Link>
+        </div>
+
+        <button
+          type="button"
+          aria-label="Toggle menu"
+          aria-expanded={open}
+          aria-controls="mobile-site-menu"
+          onClick={() => setOpen((value) => !value)}
+          className="mobile-topbar-menu-btn"
+        >
+          <span className={open ? "hamburger open" : "hamburger"} aria-hidden="true">
+            <span />
+            <span />
+            <span />
+          </span>
+          <span className="sr-only">{open ? "Close menu" : "Open menu"}</span>
+        </button>
+      </nav>
+
       <div className={open ? "mobile-menu-overlay open" : "mobile-menu-overlay"} onClick={() => setOpen(false)} />
 
-      <aside className={open ? "mobile-menu open" : "mobile-menu"} aria-hidden={!open}>
+      <aside id="mobile-site-menu" className={open ? "mobile-menu open" : "mobile-menu"} aria-hidden={!open}>
         <div className="mobile-menu-head">
           <Link href="/" className="brand" onClick={() => setOpen(false)}>
-            <span className="brand-mark"><Sparkles size={16} /></span>
-            <span>Lead Studio</span>
+            <span className="brand-mark"><MessageCircle size={16} /></span>
+            <span>PROSPECT</span>
           </Link>
           <button type="button" className="topbar-menu-btn" onClick={() => setOpen(false)} aria-label="Close menu">
             <X size={20} />
@@ -82,8 +113,9 @@ export default function SiteHeader() {
 
         <nav className="mobile-menu-links">
           {LINKS.map((link) => (
-            <Link key={link.name} href={link.href} onClick={() => setOpen(false)}>
-              {link.name}
+            <Link key={link.name} href={link.href} onClick={() => setOpen(false)} aria-label={link.name}>
+              <link.icon size={18} />
+              <span className="sr-only">{link.name}</span>
             </Link>
           ))}
         </nav>
