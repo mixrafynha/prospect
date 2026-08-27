@@ -62,6 +62,7 @@ type LocationResolutionAttempt = {
 
 const GOOGLE_API_KEY = process.env.GOOGLE_API_KEY || "";
 const MAX_PAGES = 3;
+const PAGE_SIZE = 15;
 const DEFAULT_RADIUS_METERS = 5000;
 const ALLOWED_RADIUS_METERS = new Set([2000, 5000, 10000, 20000, 50000]);
 
@@ -126,7 +127,7 @@ async function searchPage(query: string, location: ResolvedLocation | null, page
     body: JSON.stringify({
       textQuery: query,
       languageCode: "fr",
-      pageSize: 20,
+      pageSize: PAGE_SIZE,
       ...(location
         ? {
             locationBias: {
@@ -557,7 +558,7 @@ export async function POST(request: Request) {
       placeId: location?.placeId || null,
       searchText,
       total: deduped.length,
-      pagination: { maxPages: MAX_PAGES, pageSize: 20, supportedByApi: true },
+      pagination: { maxPages: MAX_PAGES, pageSize: PAGE_SIZE, supportedByApi: true },
       leads: deduped,
       durationMs: Date.now() - startedAt,
     });
