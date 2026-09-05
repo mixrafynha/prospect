@@ -1,4 +1,4 @@
-import type { CrmLead, LeadStatus } from "./types";
+import type { CrmLead, LeadStatus, OutreachStatus } from "./types";
 import { createHistoryItem } from "./history";
 
 export const CRM_STORAGE_KEY = "weak-site-finder.crm.leads.v4";
@@ -11,6 +11,13 @@ function isBrowser() {
 
 function onlyWebsiteLeads(leads: CrmLead[]) {
   return leads.filter((lead) => Boolean(lead.website && /^https?:\/\//i.test(lead.website)));
+}
+
+function normalizeOutreachStatus(status?: string | null): OutreachStatus {
+  if (status === "contacted" || status === "replied" || status === "interested" || status === "client" || status === "not_interested") {
+    return status;
+  }
+  return "new";
 }
 
 export function loadCrmLeads(): CrmLead[] {
@@ -46,6 +53,10 @@ export function upsertCrmLeads(nextLeads: CrmLead[]) {
       tags: Array.from(new Set([...(existing.tags || []), ...(lead.tags || [])])),
       history: existing.history?.length ? existing.history : lead.history,
       contactedAt: existing.contactedAt || lead.contactedAt,
+      outreachStatus: normalizeOutreachStatus(existing.outreachStatus || lead.outreachStatus),
+      contactCount: existing.contactCount || lead.contactCount || 0,
+      lastContactedPhone: existing.lastContactedPhone || lead.lastContactedPhone || null,
+      lastContactMessage: existing.lastContactMessage || lead.lastContactMessage || null,
     } : lead);
   }
 
@@ -63,6 +74,7 @@ export function updateLeadStatus(id: string, status: LeadStatus) {
       ...lead,
       status,
       contactedAt: ["contacted", "replied", "interested", "client"].includes(status) && !lead.contactedAt ? now : lead.contactedAt,
+      outreachStatus: ["contacted", "replied", "interested", "client"].includes(status) ? "contacted" : lead.outreachStatus || "new",
       lastAction: `Status: ${status}`,
       updatedAt: now,
       history: [...(lead.history || []), createHistoryItem("status_changed", `Status alterado para ${status}`)],
@@ -82,6 +94,7 @@ export function registerLeadAction(id: string, action: "copied_message" | "opene
       ...lead,
       status,
       contactedAt: ["contacted", "replied", "interested", "client"].includes(status) && !lead.contactedAt ? now : lead.contactedAt,
+      outreachStatus: ["contacted", "replied", "interested", "client"].includes(status) ? "contacted" : lead.outreachStatus || "new",
       lastAction: label,
       updatedAt: now,
       history: [...(lead.history || []), createHistoryItem(action, label)],

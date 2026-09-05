@@ -55,7 +55,7 @@ export default function LeadsFinder() {
       const response = await fetch("/api/find-sites", {
         method: "POST",
         headers: { "Content-Type": "application/json" },
-        body: JSON.stringify({ query: clean, detectEmails: true }),
+        body: JSON.stringify({ query: clean, detectEmails: true, includeAnalysis: false }),
       });
       const data = await response.json();
       if (!response.ok) throw new Error(data.error || "Erro ao procurar leads");

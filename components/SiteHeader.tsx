@@ -10,6 +10,7 @@ const LINKS = [
   { name: "How it works", href: "/#how-it-works", icon: Search },
   { name: "Pricing", href: "/#pricing", icon: MessageCircle },
   { name: "FAQ", href: "/#faq", icon: HelpCircle },
+  { name: "Contacts", href: "/contacts", icon: Sparkles },
 ];
 
 export default function SiteHeader() {
@@ -67,8 +68,9 @@ export default function SiteHeader() {
           </div>
 
           <div className="topbar-actions">
-            <Link href="/outreach" className="ghost-link">Sign in</Link>
-            <Link href="/leads" className="button compact">Search leads</Link>
+          <Link href="/outreach" className="ghost-link">Sign in</Link>
+          <Link href="/contacts" className="ghost-link">Contacts</Link>
+          <Link href="/leads" className="button compact">Search leads</Link>
           </div>
         </div>
       </nav>
@@ -122,6 +124,7 @@ export default function SiteHeader() {
 
         <div className="mobile-menu-actions">
           <Link href="/outreach" className="ghost-link" onClick={() => setOpen(false)}>Sign in</Link>
+          <Link href="/contacts" className="ghost-link" onClick={() => setOpen(false)}>Contacts</Link>
           <Link href="/leads" className="button compact" onClick={() => setOpen(false)}>Search leads</Link>
         </div>
       </aside>

@@ -40,6 +40,7 @@ type SearchRequest = {
   radius?: number | string;
   placeId?: string;
   detectEmails?: boolean;
+  includeAnalysis?: boolean;
 };
 
 type ResolvedLocation = {
@@ -64,11 +65,16 @@ const GOOGLE_API_KEY = process.env.GOOGLE_API_KEY || "";
 const MAX_PAGES = 3;
 const PAGE_SIZE = 15;
 const LEAD_CONCURRENCY = 4;
-const DEFAULT_RADIUS_METERS = 5000;
+const DEFAULT_RADIUS_METERS = 10000;
 const ALLOWED_RADIUS_METERS = new Set([2000, 5000, 10000, 20000, 50000]);
+const ANALYSIS_LIMIT = 8;
 
 function logStep(step: string, data?: unknown) {
   console.log(`[FIND-SITES] ${step}`, data ?? "");
+}
+
+function makeSearchId() {
+  return `search_${Date.now()}_${Math.random().toString(36).slice(2, 8)}`;
 }
 
 function normalizeDomain(website: string) {
@@ -112,7 +118,7 @@ function scoreLocationCandidate(input: string, candidate: GooglePlace) {
   return score;
 }
 
-async function searchPage(query: string, location: ResolvedLocation | null, pageToken?: string): Promise<SearchResponse> {
+async function searchPage(query: string, location: ResolvedLocation | null, pageToken?: string, page = 1, searchId?: string): Promise<SearchResponse> {
   if (!GOOGLE_API_KEY || GOOGLE_API_KEY.includes("your_google")) {
     throw new Error("Mete a tua GOOGLE_API_KEY no ficheiro .env e reinicia o servidor.");
   }
@@ -141,6 +147,14 @@ async function searchPage(query: string, location: ResolvedLocation | null, page
         : {}),
       ...(pageToken ? { pageToken } : {}),
     }),
+  });
+  logStep("GOOGLE REQUEST", {
+    searchId: searchId || null,
+    page,
+    query,
+    latitude: location?.latitude ?? null,
+    longitude: location?.longitude ?? null,
+    radiusMeters: location ? location.radiusMeters : null,
   });
 
   const data = (await response.json().catch(() => null)) as SearchResponse & { error?: { message?: string } } | null;
@@ -276,12 +290,16 @@ async function fetchPlaceDetails(placeId: string) {
   };
 }
 
+function normalizeCoordinates(place: GooglePlace) {
+  const lat = place.location?.latitude;
+  const lng = place.location?.longitude;
+  if (!isValidLatLng(lat, lng)) return null;
+  return { latitude: Number(lat), longitude: Number(lng) };
+}
+
 async function resolveLocation(body: SearchRequest): Promise<ResolvedLocation | null> {
   const radiusRaw = Number(body.radius);
-  const radiusMeters = ALLOWED_RADIUS_METERS.has(radiusRaw) ? radiusRaw : NaN;
-  if (!Number.isFinite(radiusMeters)) {
-    throw new Error("Invalid radius");
-  }
+  const radiusMeters = ALLOWED_RADIUS_METERS.has(radiusRaw) ? radiusRaw : DEFAULT_RADIUS_METERS;
 
   const lat = Number(body.lat);
   const lng = Number(body.lng);
@@ -341,13 +359,23 @@ function distanceKm(a: { latitude: number; longitude: number }, b: { latitude?: 
   return 2 * R * Math.asin(Math.sqrt(h));
 }
 
-async function searchBusinesses(query: string, location: ResolvedLocation | null) {
+function placeDistanceKm(location: ResolvedLocation, place: GooglePlace) {
+  const coordinates = normalizeCoordinates(place);
+  if (!coordinates) return null;
+  return distanceKm({ latitude: location.latitude, longitude: location.longitude }, coordinates);
+}
+
+function leadSortDistance(lead: Lead) {
+  return typeof lead.distanceKm === "number" ? lead.distanceKm : Number.POSITIVE_INFINITY;
+}
+
+async function searchBusinesses(query: string, location: ResolvedLocation | null, searchId: string) {
   const seen = new Set<string>();
   const results: GooglePlace[] = [];
   let pageToken: string | undefined;
 
   for (let page = 0; page < MAX_PAGES; page++) {
-    const data = await searchPage(query, location, pageToken);
+    const data = await searchPage(query, location, pageToken, page + 1, searchId);
     for (const place of data.places || []) {
       const id = place.id || `${place.displayName?.text || ""}|${place.formattedAddress || ""}`;
       if (seen.has(id)) continue;
@@ -356,14 +384,37 @@ async function searchBusinesses(query: string, location: ResolvedLocation | null
     }
     pageToken = data.nextPageToken;
     if (!pageToken) break;
-    await new Promise((resolve) => setTimeout(resolve, 1200));
+    await new Promise((resolve) => setTimeout(resolve, 250));
   }
 
   if (!location) return results;
   const filtered = results.filter((place) => {
-    if (!place.location || typeof place.location.latitude !== "number" || typeof place.location.longitude !== "number") return false;
-    const km = distanceKm({ latitude: location.latitude, longitude: location.longitude }, place.location);
-    return km !== null && km <= location.radiusMeters / 1000;
+    const coordinates = normalizeCoordinates(place);
+    if (!coordinates) {
+      logStep("PLACE_WITHOUT_LOCATION", { name: place.displayName?.text || null, placeId: place.id || null });
+      return false;
+    }
+    const km = distanceKm({ latitude: location.latitude, longitude: location.longitude }, coordinates);
+    const accepted = km !== null && km <= location.radiusMeters / 1000;
+    logStep("DISTANCE", {
+      name: place.displayName?.text || null,
+      placeId: place.id || null,
+      distanceKm: km,
+      radiusKm: location.radiusMeters / 1000,
+      accepted,
+    });
+    return accepted;
+  });
+  filtered.sort((a, b) => {
+    const da = placeDistanceKm(location, a) ?? Number.POSITIVE_INFINITY;
+    const db = placeDistanceKm(location, b) ?? Number.POSITIVE_INFINITY;
+    if (da !== db) return da - db;
+    const ra = typeof a.rating === "number" ? a.rating : 0;
+    const rb = typeof b.rating === "number" ? b.rating : 0;
+    if (ra !== rb) return rb - ra;
+    const va = typeof a.userRatingCount === "number" ? a.userRatingCount : 0;
+    const vb = typeof b.userRatingCount === "number" ? b.userRatingCount : 0;
+    return vb - va;
   });
   logStep("PLACES AFTER RADIUS FILTER", { before: results.length, after: filtered.length });
   return filtered;
@@ -420,23 +471,20 @@ function isMobile(phone: PhoneNumberData) {
 function dedupeLeads(leads: Lead[]) {
   const byPlace = new Map<string, Lead>();
   const byPhone = new Map<string, Lead>();
-  const byDomain = new Map<string, Lead>();
-  const byNameAddress = new Map<string, Lead>();
+  const byWebsiteLocation = new Map<string, Lead>();
   const output: Lead[] = [];
 
   for (const lead of leads) {
     const placeKey = lead.placeId || "";
     const phoneKey = lead.phones.find((phone) => phone.normalizedE164)?.normalizedE164 || "";
-    const domainKey = normalizeDomain(lead.website) || "";
-    const nameAddressKey = `${lead.name.trim().toLowerCase()}|${lead.address.trim().toLowerCase()}`;
-    const existing = (placeKey && byPlace.get(placeKey)) || (phoneKey && byPhone.get(phoneKey)) || (domainKey && byDomain.get(domainKey)) || byNameAddress.get(nameAddressKey);
+    const websiteKey = `${normalizeDomain(lead.website) || ""}|${lead.location?.latitude ?? ""}|${lead.location?.longitude ?? ""}`;
+    const existing = (placeKey && byPlace.get(placeKey)) || (phoneKey && byPhone.get(phoneKey)) || byWebsiteLocation.get(websiteKey);
 
     if (!existing) {
       output.push(lead);
       if (placeKey) byPlace.set(placeKey, lead);
       if (phoneKey) byPhone.set(phoneKey, lead);
-      if (domainKey) byDomain.set(domainKey, lead);
-      byNameAddress.set(nameAddressKey, lead);
+      byWebsiteLocation.set(websiteKey, lead);
       continue;
     }
 
@@ -455,8 +503,7 @@ function dedupeLeads(leads: Lead[]) {
     if (index >= 0) output[index] = merged;
     if (placeKey) byPlace.set(placeKey, merged);
     if (phoneKey) byPhone.set(phoneKey, merged);
-    if (domainKey) byDomain.set(domainKey, merged);
-    byNameAddress.set(nameAddressKey, merged);
+    byWebsiteLocation.set(websiteKey, merged);
   }
 
   return output;
@@ -467,8 +514,11 @@ export async function POST(request: Request) {
   try {
     const body = (await request.json().catch(() => ({}))) as SearchRequest;
     const query = String(body.query || "").trim();
+    const searchId = makeSearchId();
     const detectEmails = body.detectEmails !== false;
+    const includeAnalysis = body.includeAnalysis === true;
     console.log("[FIND-SITES] LOCATION INPUT", {
+      searchId,
       locationText: body.locationText ?? null,
       placeId: body.placeId ?? null,
       lat: body.lat ?? null,
@@ -483,6 +533,7 @@ export async function POST(request: Request) {
     }
 
     console.log("[FIND-SITES] LOCATION RESOLVED", {
+      searchId,
       locationText: body.locationText || null,
       placeId: body.placeId || null,
       lat: location?.latitude ?? null,
@@ -493,6 +544,7 @@ export async function POST(request: Request) {
     });
 
     console.log("[FIND-SITES] GOOGLE REQUEST", {
+      searchId,
       query,
       latitude: location?.latitude ?? null,
       longitude: location?.longitude ?? null,
@@ -501,7 +553,7 @@ export async function POST(request: Request) {
     });
 
     const searchText = query;
-    const places = await searchBusinesses(searchText, location);
+    const places = await searchBusinesses(searchText, location, searchId);
     console.log("[FIND-SITES] PLACES RECEIVED", {
       count: places.length,
       center: location ? { lat: location.latitude, lng: location.longitude } : null,
@@ -509,14 +561,19 @@ export async function POST(request: Request) {
     });
     async function processPlace(place: GooglePlace, index: number): Promise<Lead> {
       const name = place.displayName?.text || "Sem nome";
-      const website = place.websiteUri || "";
-      logStep(`Processing ${index + 1}/${places.length}`, { name, website: website || "sem site" });
+      const googleWebsiteUri = place.websiteUri || null;
+      logStep(`Processing ${index + 1}/${places.length}`, { searchId, name, website: googleWebsiteUri || "sem site" });
 
-      const websiteResult = website
-        ? await enrichWebsiteContacts(website)
+      const websiteResult = includeAnalysis && googleWebsiteUri
+        ? await enrichWebsiteContacts(googleWebsiteUri)
         : { email: null, emailSource: null, phones: [], checkedEmailPages: [], checkedPhonePages: [], finalUrl: null };
 
-      const metrics = website
+      const resolvedWebsiteUri = websiteResult.finalUrl || null;
+      const websiteMismatch = Boolean(googleWebsiteUri && resolvedWebsiteUri && normalizeDomain(googleWebsiteUri) !== normalizeDomain(resolvedWebsiteUri));
+      const websiteFinal = websiteMismatch ? googleWebsiteUri : resolvedWebsiteUri || googleWebsiteUri;
+      const website = websiteFinal || "";
+
+      const metrics = includeAnalysis && website
         ? await checkPageSpeed(website)
         : { performance: 0, seo: 0, accessibility: 0, bestPractices: 0, auditAvailable: false, auditError: null, auditDetails: [] };
 
@@ -526,14 +583,20 @@ export async function POST(request: Request) {
 
       const base = {
         placeId: place.id || null,
+        searchOrder: index,
         name,
         address: place.formattedAddress || "",
         website,
+        googleWebsiteUri,
+        resolvedWebsiteUri,
+        websiteFinal,
+        websiteMismatch,
         maps: place.googleMapsUri || "",
         businessStatus: place.businessStatus || null,
         primaryType: place.primaryType || null,
         types: place.types || [],
-        location: place.location ? { latitude: place.location.latitude ?? null, longitude: place.location.longitude ?? null } : null,
+        location: normalizeCoordinates(place),
+        distanceKm: location ? placeDistanceKm(location, place) : null,
         rating: typeof place.rating === "number" ? place.rating : null,
         userRatingCount: typeof place.userRatingCount === "number" ? place.userRatingCount : null,
         email: detectEmails ? websiteResult.email : null,
@@ -549,16 +612,29 @@ export async function POST(request: Request) {
     }
 
     const leads: Lead[] = [];
-    for (let start = 0; start < places.length; start += LEAD_CONCURRENCY) {
-      const batch = places.slice(start, start + LEAD_CONCURRENCY);
+    const concurrency = includeAnalysis ? LEAD_CONCURRENCY : Math.max(6, LEAD_CONCURRENCY);
+    for (let start = 0; start < places.length; start += concurrency) {
+      const batch = places.slice(start, start + concurrency);
       const processed = await Promise.all(batch.map((place, offset) => processPlace(place, start + offset)));
       leads.push(...processed);
+      if (!includeAnalysis && leads.length >= ANALYSIS_LIMIT) break;
     }
 
-    const deduped = dedupeLeads(leads);
-    deduped.sort((a, b) => Number(b.hasMobilePhone) - Number(a.hasMobilePhone) || Number(b.hasWebsiteMobilePhone) - Number(a.hasWebsiteMobilePhone) || b.weakScore - a.weakScore);
+    const deduped = includeAnalysis ? dedupeLeads(leads) : dedupeLeads(leads).slice(0, ANALYSIS_LIMIT);
+    deduped.sort((a, b) => {
+      const distanceDelta = leadSortDistance(a) - leadSortDistance(b);
+      if (distanceDelta !== 0) return distanceDelta;
+      const relevanceDelta = ((a.searchOrder ?? 0) - (b.searchOrder ?? 0));
+      if (relevanceDelta !== 0) return relevanceDelta;
+      const ratingDelta = (b.rating || 0) - (a.rating || 0);
+      if (ratingDelta !== 0) return ratingDelta;
+      const reviewsDelta = (b.userRatingCount || 0) - (a.userRatingCount || 0);
+      if (reviewsDelta !== 0) return reviewsDelta;
+      return Number(b.hasMobilePhone) - Number(a.hasMobilePhone) || Number(b.hasWebsiteMobilePhone) - Number(a.hasWebsiteMobilePhone) || b.weakScore - a.weakScore;
+    });
 
     return NextResponse.json({
+      searchId,
       query,
       location,
       placeId: location?.placeId || null,

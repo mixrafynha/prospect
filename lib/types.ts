@@ -28,14 +28,20 @@ export type AuditDetail = {
 
 export type Lead = Metrics & {
   placeId: string | null;
+  searchOrder?: number;
   name: string;
   address: string;
   website: string;
+  googleWebsiteUri?: string | null;
+  resolvedWebsiteUri?: string | null;
+  websiteFinal?: string | null;
+  websiteMismatch?: boolean;
   maps: string;
   businessStatus: string | null;
   primaryType: string | null;
   types: string[];
   location: { latitude: number | null; longitude: number | null } | null;
+  distanceKm?: number | null;
   rating: number | null;
   userRatingCount: number | null;
   email: string | null;

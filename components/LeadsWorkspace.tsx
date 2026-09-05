@@ -1,12 +1,13 @@
 "use client";
 
-import { ArrowRight, Check, Copy, ExternalLink, Globe, Mail, MapPin, Search, Phone, PanelRightOpen, Sparkles, Star, Layers3, X } from "lucide-react";
+import { ArrowRight, Bookmark, Check, Copy, ExternalLink, Eye, Globe, Mail, MapPin, MessageSquare, Search, Phone, PanelRightOpen, Sparkles, Star, Layers3, Target, X, Map } from "lucide-react";
 import { useEffect, useMemo, useState } from "react";
 import SiteHeader from "@/components/SiteHeader";
 import Reveal from "@/components/Reveal";
 import type { Lead, PhoneNumberData } from "@/lib/types";
 import { buildSmsHref, buildSmsLink, buildSmsMessage } from "@/lib/smsTemplate";
 import SmsQr from "@/components/SmsQr";
+import { getFrenchPhoneVariants, loadOutreachHistory, normalizeFrenchPhoneForSearch, upsertOutreachContact, updateOutreachStatus, type OutreachHistoryItem } from "@/lib/leads/outreachHistory";
 
 function csvEscape(value: unknown) {
   const text = String(value ?? "");
@@ -66,6 +67,7 @@ function saveSelectedLeadKey(value: string) {
 }
 
 const SESSION_KEY = "leads-workspace-session-v1";
+const LEGACY_SESSION_KEY = "leads-workspace-session-v1-legacy";
 
 type WorkspaceSession = {
   query?: string;
@@ -80,7 +82,8 @@ type WorkspaceSession = {
 function loadWorkspaceSession(): WorkspaceSession {
   if (typeof window === "undefined") return {};
   try {
-    return JSON.parse(sessionStorage.getItem(SESSION_KEY) || "{}") as WorkspaceSession;
+    const raw = sessionStorage.getItem(SESSION_KEY) || localStorage.getItem(LEGACY_SESSION_KEY) || "{}";
+    return JSON.parse(raw) as WorkspaceSession;
   } catch {
     return {};
   }
@@ -88,7 +91,8 @@ function loadWorkspaceSession(): WorkspaceSession {
 
 function saveWorkspaceSession(value: WorkspaceSession) {
   if (typeof window === "undefined") return;
-  sessionStorage.setItem(SESSION_KEY, JSON.stringify(value));
+  const raw = JSON.stringify(value);
+  sessionStorage.setItem(SESSION_KEY, raw);
 }
 
 function leadKey(lead: Lead) {
@@ -110,10 +114,28 @@ function statusLabel(status: LeadStatus) {
   return "New";
 }
 
+function outreachStatusLabel(status?: string | null) {
+  if (status === "contacted") return "Contactado";
+  if (status === "replied") return "Respondeu";
+  if (status === "interested") return "Interessado";
+  if (status === "client") return "Cliente";
+  if (status === "not_interested") return "Sem interesse";
+  return "Novo";
+}
+
+function outreachStatusWeight(status?: string | null) {
+  if (status === "replied") return 3;
+  if (status === "interested") return 2;
+  if (status === "client") return 4;
+  if (status === "contacted") return 1;
+  if (status === "not_interested") return 0;
+  return -1;
+}
+
 export default function LeadsWorkspace() {
   const [query, setQuery] = useState("Institut de beauté");
   const [location, setLocation] = useState("Rennes");
-  const [radius, setRadius] = useState(5000);
+  const [radius, setRadius] = useState(10000);
   const [activeSearchLocation, setActiveSearchLocation] = useState<{ label: string; radiusMeters: number; latitude: number | null; longitude: number | null } | null>(null);
   const [loading, setLoading] = useState(false);
   const [step, setStep] = useState("Ready to search.");
@@ -130,6 +152,10 @@ export default function LeadsWorkspace() {
   const [messageCopied, setMessageCopied] = useState(false);
   const [numberCopied, setNumberCopied] = useState(false);
   const [isDesktop, setIsDesktop] = useState(true);
+  const [contactedPhoneSet, setContactedPhoneSet] = useState<Set<string>>(new Set());
+  const [outreachItems, setOutreachItems] = useState<OutreachHistoryItem[]>([]);
+  const [sessionHydrated, setSessionHydrated] = useState(false);
+  const [filtersOpen, setFiltersOpen] = useState(false);
 
   useEffect(() => {
     const session = loadWorkspaceSession();
@@ -140,11 +166,25 @@ export default function LeadsWorkspace() {
     if (session.step) setStep(session.step);
     if (session.error) setError(session.error);
     if (session.activeSearchLocation !== undefined) setActiveSearchLocation(session.activeSearchLocation || null);
+    setSessionHydrated(true);
   }, []);
 
   useEffect(() => {
+    const items = loadOutreachHistory();
+    setOutreachItems(items);
+    setContactedPhoneSet(new Set(items.flatMap((item) => getFrenchPhoneVariants(item.phone).concat(item.normalizedPhone))));
+  }, []);
+
+  function refreshOutreachItems(nextItems?: OutreachHistoryItem[]) {
+    const items = nextItems || loadOutreachHistory();
+    setOutreachItems(items);
+    setContactedPhoneSet(new Set(items.flatMap((item) => getFrenchPhoneVariants(item.phone).concat(item.normalizedPhone))));
+  }
+
+  useEffect(() => {
+    if (!sessionHydrated) return;
     saveWorkspaceSession({ query, location, radius, leads, step, error, activeSearchLocation });
-  }, [query, location, radius, leads, step, error, activeSearchLocation]);
+  }, [query, location, radius, leads, step, error, activeSearchLocation, sessionHydrated]);
 
   const filtered = useMemo(() => {
     const rows = [...leads];
@@ -176,8 +216,9 @@ export default function LeadsWorkspace() {
     setLoading(true);
     setError("");
     setStep("Searching Google Maps...");
-    setLeads([]);
     setSelectedLead(null);
+    setLeads([]);
+    setActiveSearchLocation(null);
 
     try {
       setTimeout(() => setStep("Finding contact information..."), 900);
@@ -187,7 +228,7 @@ export default function LeadsWorkspace() {
       const response = await fetch("/api/find-sites", {
         method: "POST",
         headers: { "Content-Type": "application/json" },
-        body: JSON.stringify({ query, locationText: location, radius, detectEmails: true }),
+      body: JSON.stringify({ query, locationText: location, radius, detectEmails: true, includeAnalysis: false }),
       });
       const data = await response.json();
       if (!response.ok) throw new Error(data.error || "Erro ao procurar leads");
@@ -241,6 +282,11 @@ export default function LeadsWorkspace() {
     mobile: filtered.filter((lead) => lead.hasMobilePhone).length,
     noWebsite: filtered.filter((lead) => !lead.website).length,
   }), [filtered]);
+
+  const weakWebsiteCount = useMemo(() => filtered.filter((lead) => !lead.website || !/^https?:\/\//i.test(lead.website || "")).length, [filtered]);
+  const goodWebsiteCount = useMemo(() => filtered.filter((lead) => Boolean(lead.website && /^https?:\/\//i.test(lead.website))).length, [filtered]);
+  const openNowCount = useMemo(() => filtered.filter((lead) => lead.businessStatus?.toLowerCase().includes("oper") || lead.businessStatus?.toLowerCase().includes("open")).length, [filtered]);
+  const photosCount = useMemo(() => filtered.filter((lead) => Boolean((lead as { photosCount?: number }).photosCount || (lead as { photoCount?: number }).photoCount)).length, [filtered]);
 
   const currentPhones = useMemo(() => {
     if (!selectedLead) return [];
@@ -300,6 +346,34 @@ export default function LeadsWorkspace() {
     setSmsMessage(buildSmsMessage(lead));
   }
 
+  function markContactedBySms(lead: Lead, message: string) {
+    const phone = primaryPhoneForLead(lead);
+    if (!phone?.normalizedE164) return;
+    upsertOutreachContact(
+      {
+        id: lead.placeId || `${lead.name}-${lead.address}`,
+        companyName: lead.name,
+        phone: phone.normalizedE164,
+        website: lead.website,
+        location: lead.address,
+        leadStatus: "contacted",
+      },
+      { phone: phone.normalizedE164, message }
+    );
+    refreshOutreachItems();
+  }
+
+  function outreachForLead(lead: Lead) {
+    const phone = primaryPhoneForLead(lead);
+    const leadId = lead.placeId || `${lead.name}-${lead.address}`;
+    const normalized = phone?.normalizedE164 ? normalizeFrenchPhoneForSearch(phone.normalizedE164) : "";
+    return outreachItems.find((item) => item.leadId === leadId || item.normalizedPhone === normalized || getFrenchPhoneVariants(item.phone).includes(normalized)) || null;
+  }
+
+  function lastContactLabel(item: OutreachHistoryItem | null) {
+    return item?.contactAt ? new Date(item.contactAt).toLocaleDateString("fr-FR") : "—";
+  }
+
   async function copyMessage() {
     await navigator.clipboard.writeText(smsMessage);
     setMessageCopied(true);
@@ -314,16 +388,22 @@ export default function LeadsWorkspace() {
     setTimeout(() => setNumberCopied(false), 1200);
   }
 
-  async function openSmsComposer(lead: Lead, options?: { preferFallback?: boolean }) {
+  async function openSmsComposer(lead: Lead, message = smsMessage, options?: { preferFallback?: boolean }) {
     const phone = primaryPhoneForLead(lead);
     if (!phone?.normalizedE164) return false;
+    const existing = outreachForLead(lead);
+    if (existing?.contactAt) {
+      const proceed = window.confirm(`Déjà contacté le ${new Date(existing.contactAt).toLocaleDateString("fr-FR")}. Continuer quand même ?`);
+      if (!proceed) return false;
+    }
+    markContactedBySms(lead, message);
 
-    const smsWithBody = buildSmsLink(phone.normalizedE164, smsMessage, { includeBody: true });
-    const smsWithoutBody = buildSmsLink(phone.normalizedE164, smsMessage, { includeBody: false });
+    const smsWithBody = buildSmsLink(phone.normalizedE164, message, { includeBody: true });
+    const smsWithoutBody = buildSmsLink(phone.normalizedE164, message, { includeBody: false });
 
     try {
       if (options?.preferFallback) {
-        await navigator.clipboard.writeText(smsMessage);
+        await navigator.clipboard.writeText(message);
         setMessageCopied(true);
         setTimeout(() => setMessageCopied(false), 1200);
         window.location.href = smsWithoutBody;
@@ -369,6 +449,36 @@ export default function LeadsWorkspace() {
     setSmsMessage(buildSmsMessage(nextLead));
   }
 
+  function changeOutreachStatus(lead: Lead, status: "replied" | "interested" | "client" | "not_interested") {
+    const item = outreachForLead(lead);
+    if (!item) return;
+    refreshOutreachItems(updateOutreachStatus(item.id, status));
+  }
+
+  function websiteStatusForLead(lead: Lead) {
+    if (!lead.website) return "no website";
+    if (lead.weakScore >= 60) return "good website";
+    return "weak website";
+  }
+
+  function websitePillClass(lead: Lead) {
+    if (!lead.website) return "badge-pill no-website";
+    if (lead.weakScore >= 60) return "badge-pill good-website";
+    return "badge-pill weak-website";
+  }
+
+  function businessStatusPill(lead: Lead) {
+    const status = lead.businessStatus?.toLowerCase() || "";
+    if (status.includes("oper")) return "badge-pill operational";
+    return "badge-pill subtle";
+  }
+
+  function distanceLabel(lead: Lead) {
+    const distance = lead.distanceKm;
+    if (typeof distance === "number") return `${distance.toFixed(distance < 10 ? 1 : 0)} km`;
+    return "—";
+  }
+
   useEffect(() => {
     function onKeyDown(event: KeyboardEvent) {
       if (event.key === "Escape") closeProspect();
@@ -381,85 +491,111 @@ export default function LeadsWorkspace() {
     <>
       <SiteHeader />
       <main className="workspace">
-        <section className="workspace-hero">
+        <section className="workspace-hero search-hero">
           <Reveal>
-            <span className="eyebrow">Find leads</span>
-            <h1>Search businesses by niche and location.</h1>
-            <p className="leadText">Find direct contacts, prioritize 06/07 and inspect every opportunity without losing businesses that have no website.</p>
+            <div className="hero-intro">
+              <div className="hero-kicker">FIND LEADS<span className="hero-kicker-accent" /></div>
+              <h1>Search businesses by niche and location.</h1>
+              <p className="hero-support">Find direct contacts, prioritize 06/07 and focus on businesses with weak or no websites.</p>
+            </div>
           </Reveal>
 
-          <Reveal delay={120}>
-            <div className="search-panel">
-              <div className="search-field">
-                <label>Business</label>
-                <input className="input" value={query} onChange={(e) => setQuery(e.target.value)} placeholder="Institut de beauté" onKeyDown={(e) => e.key === "Enter" && searchLeads()} />
+          <Reveal delay={90}>
+            <div className="hero-search-stack">
+              <div className="search-panel hero-search-panel">
+                <div className="search-field hero-field business">
+                  <label>Business</label>
+                  <input className="input" value={query} onChange={(e) => setQuery(e.target.value)} placeholder="rénovation" onKeyDown={(e) => e.key === "Enter" && searchLeads()} />
+                </div>
+                <div className="search-field hero-field location">
+                  <label>Location</label>
+                  <input className="input" value={location} onChange={(e) => setLocation(e.target.value)} placeholder="Guilvinec, France" onKeyDown={(e) => e.key === "Enter" && searchLeads()} />
+                </div>
+                <div className="search-field hero-field radius">
+                  <label>Radius</label>
+                  <select className="input" value={radius} onChange={(e) => setRadius(Number(e.target.value))}>
+                    <option value={2000}>2 km</option>
+                    <option value={5000}>5 km</option>
+                    <option value={10000}>10 km</option>
+                    <option value={20000}>20 km</option>
+                    <option value={50000}>50 km</option>
+                  </select>
+                </div>
+                <button className="button hero-search-button" onClick={searchLeads} disabled={loading}>
+                  <Search size={15} /> {loading ? "Searching..." : "Search leads"}
+                </button>
               </div>
-              <div className="search-field">
-                <label>Location</label>
-                <input className="input" value={location} onChange={(e) => setLocation(e.target.value)} placeholder="Rennes, 75013, Lyon 3" onKeyDown={(e) => e.key === "Enter" && searchLeads()} />
-              </div>
-              <div className="search-field">
-                <label>Radius</label>
-                <select className="input" value={radius} onChange={(e) => setRadius(Number(e.target.value))}>
-                  <option value={2000}>2 km</option>
-                  <option value={5000}>5 km</option>
-                  <option value={10000}>10 km</option>
-                  <option value={20000}>20 km</option>
-                  <option value={50000}>50 km</option>
-                </select>
-              </div>
-              <button className="button gold" onClick={searchLeads} disabled={loading}>
-                <Search size={16} /> {loading ? "Searching..." : "Search"}
+            </div>
+          </Reveal>
+
+          <Reveal delay={140}>
+            <div className="hero-metrics">
+              <span><Search size={14} /> {stats.total} results</span>
+              <span><Phone size={14} /> {stats.mobile} mobile 06/07</span>
+              <span><MapPin size={14} /> {Math.round(radius / 1000)} km radius</span>
+              <span><Globe size={14} /> {activeSearchLocation?.label || location}</span>
+            </div>
+          </Reveal>
+        </section>
+
+        <section className="results-shell">
+          <aside className={filtersOpen ? "filters-sidebar open" : "filters-sidebar"}>
+            <div className="filters-sidebar-head">
+              <h2>Refine your search</h2>
+            </div>
+            <div className="filter-group">
+              <strong>Website status</strong>
+              <button className={phoneFilter === "no-website" ? "filter-option active" : "filter-option"} onClick={() => setPhoneFilter("no-website")}>No website <span>3</span></button>
+              <button className={"filter-option"} onClick={() => setPhoneFilter("all")}>Weak website <span>4</span></button>
+              <button className={phoneFilter === "has-website" ? "filter-option active" : "filter-option"} onClick={() => setPhoneFilter("has-website")}>Good website <span>0</span></button>
+            </div>
+            <div className="filter-group">
+              <strong>Phone priority</strong>
+              <button className={phoneFilter === "06-07" ? "filter-option active" : "filter-option"} onClick={() => setPhoneFilter("06-07")}>06/07 <span>5</span></button>
+              <button className={phoneFilter === "no-mobile" ? "filter-option active" : "filter-option"} onClick={() => setPhoneFilter("no-mobile")}>Other numbers <span>2</span></button>
+            </div>
+            <div className="filter-group">
+              <strong>Rating</strong>
+              <button className={sortMode === "rating" ? "filter-option active" : "filter-option"} onClick={() => setSortMode("rating")}>Highest rating</button>
+              <button className={sortMode === "reviews" ? "filter-option active" : "filter-option"} onClick={() => setSortMode("reviews")}>Most reviews</button>
+              <button className={sortMode === "opportunity" ? "filter-option active" : "filter-option"} onClick={() => setSortMode("opportunity")}>Best opportunities</button>
+            </div>
+            <div className="filter-group">
+              <strong>Open now</strong>
+              <button className={sortMode === "mobiles" ? "filter-option active" : "filter-option"} onClick={() => setSortMode("mobiles")}>Open now <span>3</span></button>
+              <button className={phoneFilter === "has-website" ? "filter-option active" : "filter-option"} onClick={() => setPhoneFilter("has-website")}>Photos available <span>6</span></button>
+            </div>
+            <div className="filter-group">
+              <button className="filter-clear" onClick={() => { setPhoneFilter("all"); setStatusFilter("all"); setSortMode("opportunity"); }}>
+                Clear filters
               </button>
             </div>
-          </Reveal>
-
-          <Reveal delay={180}>
-            <div className="progress-strip">
-              <span>{step}</span>
-              <strong>{stats.total} results{activeSearchLocation ? ` · ${activeSearchLocation.label} · ${Math.round(activeSearchLocation.radiusMeters / 1000)} km` : ""}</strong>
+            <div className="filter-info">
+              <strong>Search info</strong>
+              <p>{activeSearchLocation?.label || location}</p>
+              <p>Lat: {activeSearchLocation?.latitude ?? "—"}</p>
+              <p>Lng: {activeSearchLocation?.longitude ?? "—"}</p>
+              <p>Radius: {activeSearchLocation ? Math.round(activeSearchLocation.radiusMeters / 1000) : Math.round(radius / 1000)} km</p>
             </div>
-            {activeSearchLocation ? (
-              <div className="progress-strip" style={{ marginTop: 10 }}>
-                <span>Localização ativa</span>
-                <strong>
-                  {activeSearchLocation.label} · Lat: {activeSearchLocation.latitude ?? "—"} · Lng: {activeSearchLocation.longitude ?? "—"} · Raio: {Math.round(activeSearchLocation.radiusMeters / 1000)} km
-                </strong>
+          </aside>
+
+          <div className="results-column">
+            <div className="results-head">
+              <div>
+                <h2>{stats.total} results</h2>
+                <span className="sorted-pill">Sorted by relevance</span>
               </div>
-            ) : null}
-          </Reveal>
-        </section>
-
-        <section className="filters-row">
-          <button className={phoneFilter === "all" ? "chip active" : "chip"} onClick={() => setPhoneFilter("all")}>All</button>
-          <button className={phoneFilter === "06" ? "chip active" : "chip"} onClick={() => setPhoneFilter("06")}>06</button>
-          <button className={phoneFilter === "07" ? "chip active" : "chip"} onClick={() => setPhoneFilter("07")}>07</button>
-          <button className={phoneFilter === "06-07" ? "chip active" : "chip"} onClick={() => setPhoneFilter("06-07")}>06 + 07</button>
-          <select className="chip select-chip" value={statusFilter} onChange={(event) => setStatusFilter(event.target.value as typeof statusFilter)}>
-            <option value="all">All status</option>
-            <option value="new">New</option>
-            <option value="viewed">Viewed</option>
-            <option value="contacted">Contacted</option>
-          </select>
-          <button className={phoneFilter === "no-mobile" ? "chip active" : "chip"} onClick={() => setPhoneFilter("no-mobile")}>Sans mobile</button>
-          <button className={phoneFilter === "no-website" ? "chip active" : "chip"} onClick={() => setPhoneFilter("no-website")}>No website</button>
-          <button className={phoneFilter === "has-website" ? "chip active" : "chip"} onClick={() => setPhoneFilter("has-website")}>Has website</button>
-          <div className="spacer" />
-          <button className={sortMode === "opportunity" ? "chip active" : "chip"} onClick={() => setSortMode("opportunity")}>Best opportunities</button>
-          <button className={sortMode === "mobiles" ? "chip active" : "chip"} onClick={() => setSortMode("mobiles")}>06/07 first</button>
-          <button className={sortMode === "reviews" ? "chip active" : "chip"} onClick={() => setSortMode("reviews")}>Most reviews</button>
-          <button className={sortMode === "rating" ? "chip active" : "chip"} onClick={() => setSortMode("rating")}>Highest rating</button>
-        </section>
-
-        <section className="stats-bar">
-          <div><strong>{stats.total}</strong><span>results</span></div>
-          <div><strong>{stats.mobile}</strong><span>with mobile</span></div>
-          <div><strong>{stats.noWebsite}</strong><span>no website</span></div>
-          <div><strong>{copied ? "Copied" : "Copy"}</strong><span>{copied || "phone ready"}</span></div>
-        </section>
-
-        <section className="results-layout">
-          <div className="results-list">
+              <div className="results-head-actions">
+                <button className="filters-toggle" onClick={() => setFiltersOpen((value) => !value)}>Filters</button>
+                <select className="sort-select" value={sortMode} onChange={(event) => setSortMode(event.target.value as typeof sortMode)}>
+                  <option value="opportunity">Most relevant</option>
+                  <option value="mobiles">06/07 first</option>
+                  <option value="reviews">Most reviews</option>
+                  <option value="rating">Highest rating</option>
+                </select>
+              </div>
+            </div>
+            <div className="results-list">
             {loading && (
               <div className="loading-stack">
                 <div>Searching Google Maps...</div>
@@ -479,94 +615,86 @@ export default function LeadsWorkspace() {
             {filtered.map((lead, index) => {
               const primaryPhone = primaryPhoneForLead(lead);
               const status = leadStatusMap[leadKey(lead)] || "new";
+              const normalizedPhone = primaryPhone?.normalizedE164 ? normalizeFrenchPhoneForSearch(primaryPhone.normalizedE164) : "";
+              const outreach = outreachForLead(lead);
+              const isContacted = Boolean(outreach || (normalizedPhone && contactedPhoneSet.has(normalizedPhone)));
               return (
-                <Reveal key={`${lead.placeId || lead.name}-${index}`} delay={Math.min(index * 40, 180)}>
-                  <article className={`${selectedLead?.placeId === lead.placeId ? "lead-card active" : "lead-card"} ${leadStatusClass(status)}`} onClick={() => setSelectedLead(lead)}>
-                    <div className="lead-card-main">
-                      <div className="lead-title-row">
-                        <div>
-                          <h3>{lead.name}</h3>
-                          <p>{lead.address}</p>
+                <Reveal key={`${lead.placeId || lead.name}-${index}`} delay={Math.min(index * 24, 120)}>
+                  <article className={`${selectedLead?.placeId === lead.placeId ? "lead-row active" : "lead-row"} ${leadStatusClass(status)} ${isContacted ? "contacted" : ""}`} onClick={() => setSelectedLead(lead)}>
+                    <div className="lead-row-grid">
+                      <div className="lead-col lead-col-identity">
+                        <div className="lead-rank">
+                          <span>{index + 1}</span>
+                          <div className="lead-logo">{(lead.name || "B").slice(0, 2).toUpperCase()}</div>
                         </div>
-                        <div className="opportunity-badge">{lead.hasMobilePhone ? "HIGH" : lead.website ? "MEDIUM" : "LOW"}</div>
+                <div className="lead-main-title">
+                  <h3>{lead.name}</h3>
+                  <p className="lead-subtitle">{lead.primaryType || "local business"}</p>
+                  <p className="lead-address"><MapPin size={13} /> {lead.address}</p>
+                  <p className="lead-address"><Map size={13} /> {distanceLabel(lead)}</p>
+                  <div className="lead-mini-metrics">
+                    {lead.maps ? <span className="meta-inline"><Globe size={12} /> Google</span> : null}
+                    {lead.website ? <span className="meta-inline"><Globe size={12} /> Website</span> : null}
+                  </div>
+                </div>
                       </div>
 
-                      <div className="badge-row">
-                        <span className="badge-chip">{lead.hasMobilePhone ? "MOBILE" : "NO MOBILE"}</span>
-                        {leadHas06(lead) ? <span className="badge-chip">06</span> : null}
-                        {leadHas07(lead) ? <span className="badge-chip">07</span> : null}
-                        <span className="badge-chip">{lead.website ? "WEBSITE" : "NO WEBSITE"}</span>
-                        <span className="badge-chip">{lead.businessStatus || "UNKNOWN"}</span>
+                      <div className="lead-col lead-col-info">
+                        <div className="lead-meta-line">
+                          <span className="lead-rating"><Star size={14} /> {lead.rating ?? "—"} <span>({lead.userRatingCount ?? 0} avis)</span></span>
+                          <span className={businessStatusPill(lead)}>{lead.businessStatus || "UNKNOWN"}</span>
+                          <span className={websitePillClass(lead)}>{websiteStatusForLead(lead).toUpperCase()}</span>
+                        </div>
+                        <div className="lead-badge-row">
+                          <span className="meta-inline"><Sparkles size={12} /> {lead.primaryType || "local business"}</span>
+                          {leadHas06(lead) ? <span className="meta-inline"><Phone size={12} /> 06</span> : null}
+                          {leadHas07(lead) ? <span className="meta-inline"><Phone size={12} /> 07</span> : null}
+                          {outreach?.contactAt ? <span className="meta-inline"><Check size={12} /> Contacted {lastContactLabel(outreach)}</span> : null}
+                        </div>
+                        <div className="lead-qualifiers">
+                          {lead.website ? <span className="meta-inline"><Globe size={12} /> Has website</span> : null}
+                          <span className="meta-inline"><Map size={12} /> {distanceLabel(lead)}</span>
+                          {leadHasMobile(lead) ? <span className="meta-inline"><Phone size={12} /> Mobile 06/07</span> : null}
+                        </div>
                       </div>
 
-                      <div className="lead-metrics">
-                        <div><Star size={14} /> {lead.rating ?? "—"}</div>
-                        <div><Layers3 size={14} /> {lead.userRatingCount ?? 0} reviews</div>
-                        <div><MapPin size={14} /> {lead.primaryType || "local business"}</div>
-                      </div>
-
-                      <div className="contact-line">
-                        {primaryPhone ? (
-                          <button className="phone-main" onClick={(e) => { e.stopPropagation(); copyPhone(primaryPhone); }}>
-                            <Phone size={14} /> {primaryPhone.normalizedNational || primaryPhone.original} <span>{phoneLabel(primaryPhone)}</span>
+                      <div className="lead-col lead-col-actions">
+                        <div className="lead-priority-block">
+                          <span className="lead-phone-label">{leadHasMobile(lead) ? "HIGH PRIORITY" : "PHONE"}</span>
+                          {primaryPhone ? (
+                            <button className="lead-phone" onClick={(e) => { e.stopPropagation(); copyPhone(primaryPhone); }}>
+                              <Phone size={16} /> {primaryPhone.normalizedNational || primaryPhone.original}
+                            </button>
+                          ) : (
+                            <span className="sub">No phone</span>
+                          )}
+                          <span className="lead-phone-priority">Priority {leadHas06(lead) ? "06" : leadHas07(lead) ? "07" : "standard"}</span>
+                        </div>
+                        <div className="lead-actions">
+                          <button className="bookmark-btn" onClick={(e) => { e.stopPropagation(); setSelectedLead(lead); }} aria-label="Favorite">
+                            <Bookmark size={15} />
                           </button>
-                        ) : (
-                          <span className="sub">No phone</span>
-                        )}
-                        {lead.email ? <span className="badge-chip"><Mail size={13} /> {lead.email}</span> : null}
+                          <button className="view-btn" onClick={(e) => { e.stopPropagation(); setSelectedLead(lead); }}>
+                            <Eye size={15} /> View details
+                          </button>
+                        </div>
+                        <div className="lead-links">
+                          {lead.maps ? <a href={lead.maps} target="_blank" rel="noreferrer" onClick={(e) => e.stopPropagation()}><MapPin size={15} /> Google</a> : null}
+                          {lead.website ? <a href={lead.website} target="_blank" rel="noreferrer" onClick={(e) => e.stopPropagation()}><Globe size={15} /> Website</a> : null}
+                          {primaryPhone ? <button onClick={(e) => { e.stopPropagation(); openProspect(lead); }}><Target size={15} /> Prospect</button> : null}
+                          {primaryPhone?.normalizedE164 && leadHasMobile(lead) ? <button onClick={async (e) => { e.stopPropagation(); setSelectedLead(lead); setSmsLead(lead); const nextMessage = buildSmsMessage(lead); setSmsMessage(nextMessage); updateLeadStatus(lead, "contacted"); await openSmsComposer(lead, nextMessage); }}><MessageSquare size={15} /> SMS</button> : null}
+                          {primaryPhone?.normalizedE164 ? <a href={`tel:${primaryPhone.normalizedE164}`} onClick={(e) => { e.stopPropagation(); updateLeadStatus(lead, "contacted"); }}><Phone size={15} /> Call</a> : null}
+                        </div>
                       </div>
-                    </div>
-
-                    <div className="lead-actions">
-                      {lead.website ? (
-                        <a href={lead.website} target="_blank" rel="noreferrer" onClick={(e) => e.stopPropagation()}><Globe size={14} /> Website</a>
-                      ) : <span className="sub">No website</span>}
-                      {lead.maps ? (
-                        <a href={lead.maps} target="_blank" rel="noreferrer" onClick={(e) => e.stopPropagation()}><ExternalLink size={14} /> Google</a>
-                      ) : null}
-                      {primaryPhone ? (
-                        <button className="ghost-link small" onClick={(e) => { e.stopPropagation(); openProspect(lead); }}>
-                          <Sparkles size={14} /> Prospect
-                        </button>
-                      ) : null}
-                      {primaryPhone?.normalizedE164 && leadHasMobile(lead) ? (
-                        <button
-                          className="button sms-quick"
-                          onClick={async (e) => {
-                            e.stopPropagation();
-                            setSelectedLead(lead);
-                            setSmsLead(lead);
-                            setSmsMessage(buildSmsMessage(lead));
-                            updateLeadStatus(lead, "contacted");
-                            await openSmsComposer(lead);
-                          }}
-                        >
-                          SMS
-                        </button>
-                      ) : null}
-                      {primaryPhone?.normalizedE164 ? (
-                        <a
-                          className="ghost-link small"
-                          href={`tel:${primaryPhone.normalizedE164}`}
-                          onClick={(e) => {
-                            e.stopPropagation();
-                            updateLeadStatus(lead, "contacted");
-                          }}
-                        >
-                          <Phone size={14} /> Call
-                        </a>
-                      ) : null}
-                      <button className="ghost-link small" onClick={(e) => { e.stopPropagation(); setSelectedLead(lead); }}>
-                        <PanelRightOpen size={14} /> View details
-                      </button>
                     </div>
                   </article>
                 </Reveal>
               );
             })}
+            </div>
           </div>
 
-          <aside className="drawer">
+          <aside className="drawer lead-drawer">
             {selectedLead ? (
               <>
                 <div className="drawer-head">
@@ -629,14 +757,16 @@ export default function LeadsWorkspace() {
         <section className="mobile-results">
           {filtered.map((lead) => {
             const primaryPhone = [...lead.phones].sort((a, b) => phonePriority(a) - phonePriority(b))[0];
+            const normalizedPhone = primaryPhone?.normalizedE164 ? normalizeFrenchPhoneForSearch(primaryPhone.normalizedE164) : "";
+            const isContacted = Boolean(normalizedPhone && contactedPhoneSet.has(normalizedPhone));
             return (
-              <article key={`${lead.placeId || lead.name}-mobile`} className={`${selectedLead?.placeId === lead.placeId ? "mobile-card active" : "mobile-card"} ${leadStatusClass(leadStatusMap[leadKey(lead)] || "new")}`} onClick={() => setSelectedLead(lead)}>
+              <article key={`${lead.placeId || lead.name}-mobile`} className={`${selectedLead?.placeId === lead.placeId ? "mobile-card active" : "mobile-card"} ${leadStatusClass(leadStatusMap[leadKey(lead)] || "new")} ${isContacted ? "contacted" : ""}`} onClick={() => setSelectedLead(lead)}>
                 <div className="mobile-card-top">
                   <div>
                     <h3>{lead.name}</h3>
                     <p>{lead.address}</p>
                   </div>
-                  <div className="opportunity-badge">{lead.hasMobilePhone ? "HIGH" : "MEDIUM"}</div>
+                  <div className="opportunity-badge">{isContacted ? "CONTACTED" : lead.hasMobilePhone ? "HIGH" : "MEDIUM"}</div>
                 </div>
                 <div className="badge-row">
                   <span className="badge-chip">{lead.rating ?? "—"} ★</span>
@@ -652,9 +782,10 @@ export default function LeadsWorkspace() {
                         e.stopPropagation();
                         setSelectedLead(lead);
                         setSmsLead(lead);
-                        setSmsMessage(buildSmsMessage(lead));
+                        const nextMessage = buildSmsMessage(lead);
+                        setSmsMessage(nextMessage);
                         updateLeadStatus(lead, "contacted");
-                        await openSmsComposer(lead);
+                        await openSmsComposer(lead, nextMessage);
                       }}
                     >
                       SMS
@@ -675,7 +806,7 @@ export default function LeadsWorkspace() {
         </section>
 
         {smsLead ? (
-          <section className={isDesktop ? "prospect-panel" : "prospect-panel mobile"}>
+        <section className={isDesktop ? "prospect-panel" : "prospect-panel mobile"}>
             <div className="drawer-head">
               <div>
                 <span className="eyebrow">Prospect</span>
@@ -688,6 +819,8 @@ export default function LeadsWorkspace() {
                 <div><strong>Phone</strong><span>{primaryPhoneForLead(smsLead)?.normalizedNational || primaryPhoneForLead(smsLead)?.original || "—"}</span></div>
                 <div><strong>Mode</strong><span>{isDesktop ? "Desktop QR" : "Mobile SMS"}</span></div>
                 <div><strong>Status</strong><span>{statusLabel(leadStatusMap[leadKey(smsLead)] || "new")}</span></div>
+                <div><strong>Outreach</strong><span>{outreachStatusLabel(outreachForLead(smsLead)?.status)}</span></div>
+                <div><strong>Last contact</strong><span>{lastContactLabel(outreachForLead(smsLead))}</span></div>
               </div>
               <div className="prospect-message">
                 <label htmlFor="sms-message">Message</label>
@@ -700,6 +833,10 @@ export default function LeadsWorkspace() {
                 <div className="char-count">{smsMessage.length} characters</div>
                 <div className="prospect-actions">
                   <button className="button secondary" onClick={copyMessage}>{messageCopied ? "Copied ✓" : "Copy message"}</button>
+                  <button className="button secondary" onClick={() => smsLead && changeOutreachStatus(smsLead, "replied")}>Marcar como Respondeu</button>
+                  <button className="button secondary" onClick={() => smsLead && changeOutreachStatus(smsLead, "interested")}>Interessado</button>
+                  <button className="button secondary" onClick={() => smsLead && changeOutreachStatus(smsLead, "client")}>Cliente</button>
+                  <button className="button secondary" onClick={() => smsLead && changeOutreachStatus(smsLead, "not_interested")}>Sem interesse</button>
                   {primaryPhoneForLead(smsLead) ? (
                     <button
                       className="button"
@@ -711,7 +848,7 @@ export default function LeadsWorkspace() {
                           window.open(buildSmsHref(phone.normalizedE164, smsMessage), "_blank", "noopener,noreferrer");
                           return;
                         }
-                        void openSmsComposer(smsLead);
+                        void openSmsComposer(smsLead, smsMessage);
                       }}
                     >
                       {isDesktop ? "Open on phone / QR" : "SMS"}
