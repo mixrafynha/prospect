@@ -613,7 +613,7 @@ export default function LeadsWorkspace() {
                 </select>
               </div>
             </div>
-            <div className="results-list">
+            {isDesktop ? <div className="results-list">
             {loading && (
               <div className="loading-stack">
                 <div>Searching Google Maps...</div>
@@ -712,10 +712,10 @@ export default function LeadsWorkspace() {
                 </Reveal>
               );
             })}
-            </div>
+            </div> : null}
           </div>
 
-          <aside className="drawer lead-drawer">
+          {isDesktop ? <aside className="drawer lead-drawer">
             {selectedLead ? (
               <>
                 <div className="drawer-head">
@@ -772,7 +772,7 @@ export default function LeadsWorkspace() {
                 <p>Search a niche and location to get started.</p>
               </div>
             )}
-          </aside>
+          </aside> : null}
         </section>
 
         <section className="mobile-results">
