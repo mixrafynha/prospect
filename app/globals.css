@@ -1,7 +1,9 @@
+@import url("https://fonts.googleapis.com/css2?family=Audiowide&display=swap");
+
 :root{
-  --background:#f6f6f7;
+  --background:#FAEEF5;
   --surface:#FFFFFF;
-  --border:#e1e3e5;
+  --border:#E7E7E2;
   --primary:#155EEF;
   --primary-hover:#004EEB;
   --text-primary:#161616;
@@ -261,7 +263,7 @@ body::before,body::after{background:none;content:none}
 }
 *{box-sizing:border-box}
 html{scroll-behavior:smooth}
-html,body{margin:0;min-height:100%;background:var(--cream);color:var(--ink);font-family:ui-sans-serif,system-ui,-apple-system,BlinkMacSystemFont,"Segoe UI",sans-serif;-webkit-font-smoothing:antialiased;text-rendering:optimizeLegibility;overflow-x:clip}
+html,body{margin:0;min-height:100%;background:var(--cream);color:var(--ink);font-family:Inter,ui-sans-serif,system-ui,-apple-system,BlinkMacSystemFont,"Segoe UI",sans-serif;-webkit-font-smoothing:antialiased;text-rendering:optimizeLegibility;overflow-x:clip}
 a{color:inherit;text-decoration:none}button,input,textarea{font:inherit}button{transition:transform .18s ease,opacity .18s ease,box-shadow .18s ease}button:hover{transform:translateY(-1px)}
 body::before{content:"";position:fixed;inset:0;pointer-events:none;z-index:-2;background:none}
 body::after{content:none}
@@ -3267,47 +3269,6 @@ button,input,select,textarea{max-width:100%}
   .prospect-panel.mobile .prospect-summary{grid-template-columns:1fr 1fr}
   .prospect-panel.mobile{padding-left:10px !important;padding-right:10px !important}
   .prospect-panel.mobile .drawer-head{margin-left:-10px;margin-right:-10px;padding-left:10px;padding-right:10px}
-}
-
-/* Lightweight Shopify-inspired foundation for long pages and small screens. */
-main > section:not(.hero):not(.search-hero),
-.section-stack,
-.results-shell,
-.mobile-results,
-.contact-page,
-.outreach-page,
-.pipeline-page{
-  content-visibility:auto;
-  contain-intrinsic-size:1px 520px;
-}
-img{content-visibility:auto}
-button,a,input,select,textarea{font:inherit}
-:focus-visible{outline:3px solid rgba(21,94,239,.28);outline-offset:2px}
-
-@media (max-width: 768px){
-  body{font-size:14px}
-  .topbar,.nav,.landing-nav,.mobile-topbar{
-    background:rgba(246,246,247,.96);
-    border-bottom-color:#e1e3e5;
-  }
-  .workspace,.landing,.page{padding-left:12px;padding-right:12px}
-  .search-hero,.leadsHero,.hero{padding-top:18px;padding-bottom:18px}
-  .hero-copy h1,.leadsIntro h1{font-size:clamp(40px,12vw,58px);line-height:.92}
-  .section-stack{padding-top:32px;padding-bottom:38px}
-  .section-heading h2{font-size:clamp(30px,8vw,44px);line-height:1}
-  .hero-demo,.hero-visual,.showcase-frame{margin-top:8px}
-  .hero-visual-image,.showcase-frame{min-height:220px !important}
-  .button{min-height:42px;padding:0 14px;font-size:13px}
-  .topbar-actions .button,.mobile-menu-actions .button{min-height:40px}
-  .results-head h2{font-size:25px}
-  .results-head-actions{gap:6px}
-  .results-head-actions .filters-toggle,.results-head-actions .sort-select{min-height:38px}
-  .mobile-results{margin-top:12px;gap:10px}
-}
-
-@media (prefers-reduced-motion: reduce){
-  html{scroll-behavior:auto}
-  *,*::before,*::after{animation-duration:.001ms !important;animation-iteration-count:1 !important;scroll-behavior:auto !important;transition-duration:.001ms !important}
 }
 
 @media (max-width: 420px){
