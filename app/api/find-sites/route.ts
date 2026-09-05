@@ -76,6 +76,26 @@ function makeSearchId() {
   return `search_${Date.now()}_${Math.random().toString(36).slice(2, 8)}`;
 }
 
+function locationRestriction(location: ResolvedLocation) {
+  const radiusKm = location.radiusMeters / 1000;
+  const latitudeDelta = radiusKm / 111.32;
+  const longitudeScale = Math.max(Math.cos((location.latitude * Math.PI) / 180), 0.1);
+  const longitudeDelta = radiusKm / (111.32 * longitudeScale);
+
+  return {
+    rectangle: {
+      low: {
+        latitude: Math.max(-90, location.latitude - latitudeDelta),
+        longitude: Math.max(-180, location.longitude - longitudeDelta),
+      },
+      high: {
+        latitude: Math.min(90, location.latitude + latitudeDelta),
+        longitude: Math.min(180, location.longitude + longitudeDelta),
+      },
+    },
+  };
+}
+
 function normalizeDomain(website: string) {
   const url = safePublicUrl(website);
   if (!url) return null;
@@ -136,12 +156,7 @@ async function searchPage(query: string, location: ResolvedLocation | null, page
       pageSize: PAGE_SIZE,
       ...(location
         ? {
-            locationBias: {
-              circle: {
-                center: { latitude: location.latitude, longitude: location.longitude },
-                radius: location.radiusMeters,
-              },
-            },
+            locationRestriction: locationRestriction(location),
           }
         : {}),
       ...(pageToken ? { pageToken } : {}),
@@ -467,23 +482,43 @@ function isMobile(phone: PhoneNumberData) {
   return phone.valid && (national.startsWith("06") || national.startsWith("07"));
 }
 
+function locationKey(value: { latitude?: number | null; longitude?: number | null } | null | undefined) {
+  if (!value || typeof value.latitude !== "number" || typeof value.longitude !== "number") return "";
+  return `${value.latitude.toFixed(4)}|${value.longitude.toFixed(4)}`;
+}
+
+function nameAddressKey(name: string, address: string) {
+  return `${normalizeText(name)}|${normalizeText(address)}`;
+}
+
 function dedupeLeads(leads: Lead[]) {
   const byPlace = new Map<string, Lead>();
   const byPhone = new Map<string, Lead>();
   const byWebsiteLocation = new Map<string, Lead>();
+  const byNameAddress = new Map<string, Lead>();
+  const byNameLocation = new Map<string, Lead>();
   const output: Lead[] = [];
 
   for (const lead of leads) {
     const placeKey = lead.placeId || "";
     const phoneKey = lead.phones.find((phone) => phone.normalizedE164)?.normalizedE164 || "";
     const websiteKey = `${normalizeDomain(lead.website) || ""}|${lead.location?.latitude ?? ""}|${lead.location?.longitude ?? ""}`;
-    const existing = (placeKey && byPlace.get(placeKey)) || (phoneKey && byPhone.get(phoneKey)) || byWebsiteLocation.get(websiteKey);
+    const nameAddress = nameAddressKey(lead.name, lead.address);
+    const nameLocation = `${normalizeText(lead.name)}|${locationKey(lead.location)}`;
+    const existing =
+      (placeKey && byPlace.get(placeKey)) ||
+      (phoneKey && byPhone.get(phoneKey)) ||
+      byWebsiteLocation.get(websiteKey) ||
+      byNameAddress.get(nameAddress) ||
+      byNameLocation.get(nameLocation);
 
     if (!existing) {
       output.push(lead);
       if (placeKey) byPlace.set(placeKey, lead);
       if (phoneKey) byPhone.set(phoneKey, lead);
       byWebsiteLocation.set(websiteKey, lead);
+      byNameAddress.set(nameAddress, lead);
+      byNameLocation.set(nameLocation, lead);
       continue;
     }
 
@@ -503,6 +538,8 @@ function dedupeLeads(leads: Lead[]) {
     if (placeKey) byPlace.set(placeKey, merged);
     if (phoneKey) byPhone.set(phoneKey, merged);
     byWebsiteLocation.set(websiteKey, merged);
+    byNameAddress.set(nameAddress, merged);
+    byNameLocation.set(nameLocation, merged);
   }
 
   return output;
