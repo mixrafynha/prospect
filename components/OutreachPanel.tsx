@@ -57,14 +57,16 @@ export default function OutreachPanel() {
 
   return (
     <>
-      <section className="card heroMain" style={{ marginBottom: 24 }}>
-        <p className="eyebrow">Bulk outreach seguro</p>
-        <h1>Envia um email bonito para vários leads.</h1>
-        <p className="leadText">Aqui aparecem os leads selecionados em `/leads`. Revê a mensagem, confirma os destinatários e envia até 20 emails por lote.</p>
-      </section>
+      <main className="outreach-page">
+        <section className="outreach-hero">
+          <div className="hero-bg" />
+          <p className="eyebrow">Bulk outreach seguro</p>
+          <h1>Envia um email bonito para vários leads.</h1>
+          <p className="leadText">Aqui aparecem os leads selecionados em `/leads`. Revê a mensagem, confirma os destinatários e envia até 20 emails por lote.</p>
+        </section>
 
-      <section className="grid2">
-        <div className="card section">
+        <section className="outreach-grid">
+          <div className="outreach-card">
           <div className="toolbar">
             <div>
               <h2 style={{ margin: 0 }}>Destinatários</h2>
@@ -85,9 +87,9 @@ export default function OutreachPanel() {
             ))}
             {validRecipients.length === 0 && <div className="notice">Vai a `/leads`, pesquisa negócios e seleciona contactos com email.</div>}
           </div>
-        </div>
+          </div>
 
-        <div className="card section">
+          <div className="outreach-card">
           <h2 style={{ marginTop: 0 }}>Mensagem</h2>
           <textarea className="textarea" value={message} onChange={(e) => setMessage(e.target.value)} />
           <p className="footerText">O email HTML inclui automaticamente nome do negócio, website, métricas PageSpeed e botão para responder.</p>
@@ -96,8 +98,9 @@ export default function OutreachPanel() {
           <button className="button gold" onClick={sendBulk} disabled={sending || validRecipients.length === 0} style={{ width: "100%", marginTop: 14 }}>
             <Send size={18}/>{sending ? "A enviar..." : `Enviar para ${validRecipients.length} contacto(s)`}
           </button>
-        </div>
-      </section>
+          </div>
+        </section>
+      </main>
     </>
   );
 }

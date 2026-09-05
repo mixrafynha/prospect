@@ -35,7 +35,7 @@ function outreachUrl(lead: Lead) {
 export default function LeadFinder() {
   const [query, setQuery] = useState("coiffeur Rennes");
   const [location, setLocation] = useState("Rennes");
-  const [radius, setRadius] = useState(5000);
+  const [radius, setRadius] = useState(10000);
   const [activeSearchLocation, setActiveSearchLocation] = useState<{ label: string; radiusMeters: number } | null>(null);
   const [leads, setLeads] = useState<Lead[]>([]);
   const [loading, setLoading] = useState(false);
@@ -52,12 +52,13 @@ export default function LeadFinder() {
     setLoading(true);
     setError("");
     setLeads([]);
+    setActiveSearchLocation(null);
 
     try {
       const response = await fetch("/api/find-sites", {
         method: "POST",
         headers: { "Content-Type": "application/json" },
-        body: JSON.stringify({ query: clean, locationText: location, radius })
+        body: JSON.stringify({ query: clean, locationText: location, radius, includeAnalysis: false })
       });
       const data = await response.json();
       if (!response.ok) throw new Error(data.error || "Erro ao procurar leads.");
@@ -129,7 +130,7 @@ export default function LeadFinder() {
                   <option value={50000}>50 km</option>
                 </select>
               </div>
-              {activeSearchLocation ? <p className="muted">Pesquisa ativa: {activeSearchLocation.label} · {Math.round(activeSearchLocation.radiusMeters / 1000)} km</p> : null}
+              {activeSearchLocation ? <p className="muted">Pesquisa ativa: {activeSearchLocation.label} · Rayon: {Math.round(activeSearchLocation.radiusMeters / 1000)} km</p> : null}
 
               <div className="quick">
                 {presets.map((preset) => (

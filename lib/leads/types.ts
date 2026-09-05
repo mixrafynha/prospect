@@ -1,4 +1,5 @@
 export type LeadStatus = "not_contacted" | "contacted" | "replied" | "interested" | "client";
+export type OutreachStatus = "new" | "contacted" | "replied" | "interested" | "client" | "not_interested";
 
 export type LeadHistoryAction =
   | "created"
@@ -69,6 +70,10 @@ export type CrmLead = {
   issues: string[];
   opportunities: string[];
   status: LeadStatus;
+  outreachStatus?: OutreachStatus;
+  contactCount?: number;
+  lastContactedPhone?: string | null;
+  lastContactMessage?: string | null;
   notes: string[];
   tags: string[];
   history: LeadHistoryItem[];
