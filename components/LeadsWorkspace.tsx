@@ -769,25 +769,32 @@ export default function LeadsWorkspace() {
         </section>
 
         <section className="mobile-results">
-          {filtered.map((lead) => {
+          {filtered.map((lead, index) => {
             const primaryPhone = [...lead.phones].sort((a, b) => phonePriority(a) - phonePriority(b))[0];
             const normalizedPhone = primaryPhone?.normalizedE164 ? normalizeFrenchPhoneForSearch(primaryPhone.normalizedE164) : "";
             const isContacted = Boolean(normalizedPhone && contactedPhoneSet.has(normalizedPhone));
             return (
               <article key={`${lead.placeId || lead.name}-mobile`} className={`${selectedLead?.placeId === lead.placeId ? "mobile-card active" : "mobile-card"} ${leadStatusClass(leadStatusMap[leadKey(lead)] || "new")} ${isContacted ? "contacted" : ""}`} onClick={() => setSelectedLead(lead)}>
                 <div className="mobile-card-top">
-                  <div>
-                    <h3>{lead.name}</h3>
+                  <div className="mobile-card-identity">
+                    <span className="mobile-card-rank">{index + 1}</span>
+                    <div className="mobile-card-copy">
+                      <h3>{lead.name}</h3>
                     <p className="mobile-card-type">{lead.primaryType || "Local business"}</p>
                     <p>{lead.address}</p>
                     <p className="mobile-card-distance"><MapPin size={13} /> {distanceLabel(lead)} from search</p>
+                    </div>
                   </div>
-                  <div className="opportunity-badge">{isContacted ? "CONTACTED" : lead.hasMobilePhone ? "HIGH" : "MEDIUM"}</div>
+                  <div className={`mobile-priority ${leadHasMobile(lead) ? "high" : "standard"}`}>
+                    <span>{isContacted ? "CONTACTED" : leadHasMobile(lead) ? "HIGH" : "STANDARD"}</span>
+                    {leadHasMobile(lead) ? <small>06/07</small> : <small>Opportunity</small>}
+                  </div>
                 </div>
                 <div className="badge-row">
                   <span className="badge-chip">{lead.rating ?? "—"} ★</span>
                   <span className="badge-chip">{lead.userRatingCount ?? 0} reviews</span>
                   <span className="badge-chip">{lead.website ? "WEBSITE" : "NO WEBSITE"}</span>
+                  <span className="badge-chip">{lead.businessStatus?.toLowerCase().includes("oper") ? "OPEN" : "STATUS UNKNOWN"}</span>
                 </div>
                 <div className="mobile-contact">
                   {primaryPhone ? <span className="phone-main small"><Phone size={13} /> {primaryPhone.normalizedNational || primaryPhone.original}</span> : <span className="sub">No phone</span>}

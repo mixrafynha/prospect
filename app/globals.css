@@ -3180,5 +3180,155 @@ button,input,select,textarea{max-width:100%}
   .mobile-card-links button{min-width:0;max-width:100%;overflow:hidden;text-overflow:ellipsis;white-space:nowrap}
 }
 
+@media (max-width: 768px){
+  .mobile-results{
+    width:100%;
+    margin-top:18px;
+    gap:14px;
+  }
+  .mobile-card{
+    position:relative;
+    gap:15px;
+    padding:17px;
+    border-radius:18px;
+    background:rgba(255,255,255,.94);
+    box-shadow:0 14px 34px rgba(15,23,42,.09);
+  }
+  .mobile-card.active{
+    border-color:#9bb9ff;
+    box-shadow:0 0 0 2px rgba(21,94,239,.1),0 16px 36px rgba(15,23,42,.1);
+  }
+  .mobile-card-identity{
+    display:flex;
+    min-width:0;
+    gap:11px;
+    align-items:flex-start;
+  }
+  .mobile-card-rank{
+    flex:0 0 29px;
+    width:29px;
+    height:29px;
+    display:grid;
+    place-items:center;
+    border-radius:9px;
+    color:#155eef;
+    background:#eff6ff;
+    border:1px solid #bfdbfe;
+    font-size:12px;
+    font-weight:950;
+  }
+  .mobile-card-copy{
+    min-width:0;
+  }
+  .mobile-card-copy h3{
+    margin:0;
+    font-size:19px;
+    line-height:1.12;
+    letter-spacing:-.035em;
+  }
+  .mobile-card-copy p{
+    max-width:100%;
+    overflow:hidden;
+    text-overflow:ellipsis;
+  }
+  .mobile-card-copy .mobile-card-type{
+    margin-top:6px;
+    color:#344054;
+    font-size:12px;
+    font-weight:850;
+  }
+  .mobile-card-copy .mobile-card-distance{
+    color:#155eef;
+    font-weight:800;
+  }
+  .mobile-priority{
+    display:grid;
+    flex:0 0 auto;
+    gap:3px;
+    min-width:76px;
+    padding:7px 8px;
+    border-radius:10px;
+    text-align:center;
+    border:1px solid #e5e7eb;
+    background:#f8fafc;
+  }
+  .mobile-priority span{
+    font-size:9px;
+    font-weight:950;
+    letter-spacing:.06em;
+  }
+  .mobile-priority small{
+    color:#667085;
+    font-size:9px;
+    font-weight:800;
+  }
+  .mobile-priority.high{
+    color:#166534;
+    background:#ecfdf3;
+    border-color:#bbf7d0;
+  }
+  .mobile-priority.high small{color:#15803d}
+  .mobile-card.contacted .mobile-priority{
+    color:#991b1b;
+    background:#fef2f2;
+    border-color:#fecaca;
+  }
+  .mobile-card.contacted .mobile-priority small{color:#b91c1c}
+  .mobile-card .badge-row{
+    padding-top:2px;
+    border-top:1px solid #f0f2f5;
+    padding-bottom:1px;
+  }
+  .mobile-card .badge-chip{
+    color:#475467;
+    background:#f8fafc;
+    border-color:#e5e7eb;
+    font-size:10px;
+    font-weight:850;
+  }
+  .mobile-contact{
+    padding:12px;
+    border-radius:12px;
+    background:#f8fafc;
+    border:1px solid #eef2f6;
+  }
+  .mobile-contact .phone-main{
+    min-height:43px;
+    padding:0 11px;
+    background:#ecfdf3;
+    border:1px solid #bbf7d0;
+    color:#166534;
+    border-radius:10px;
+    font-weight:900;
+  }
+  .mobile-contact .button,
+  .mobile-contact .ghost-link{
+    min-height:43px;
+    border-radius:10px;
+    font-weight:900;
+  }
+  .mobile-card-links{
+    padding-top:0;
+    border-top:0;
+  }
+  .mobile-card-links a,
+  .mobile-card-links button{
+    flex:1 1 30%;
+    justify-content:center;
+    min-height:36px;
+    border-radius:9px;
+    background:#fff;
+    font-size:11px;
+  }
+}
+
+@media (max-width: 420px){
+  .mobile-card{padding:14px;border-radius:16px}
+  .mobile-card-top{grid-template-columns:minmax(0,1fr) 72px}
+  .mobile-card-copy h3{font-size:17px}
+  .mobile-priority{min-width:72px;padding:6px 5px}
+  .mobile-card .badge-chip{font-size:9px;padding:0 7px}
+}
+
 
 
