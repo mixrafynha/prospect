@@ -54,7 +54,7 @@ export default function SiteHeader() {
             </button>
 
             <Link href="/" className="brand">
-              <span className="brand-mark"><MessageCircle size={16} /></span>
+              <span className="brand-mark"><img src="/favicon.ico" alt="" /></span>
               <span>PROSPECT</span>
             </Link>
           </div>
@@ -78,7 +78,7 @@ export default function SiteHeader() {
       <nav className="mobile-topbar" aria-label="Mobile navigation">
         <div className="mobile-topbar-brand">
           <Link href="/" className="brand" onClick={() => setOpen(false)}>
-            <span className="brand-mark"><MessageCircle size={16} /></span>
+            <span className="brand-mark"><img src="/favicon.ico" alt="" /></span>
             <span>PROSPECT</span>
           </Link>
         </div>
@@ -105,7 +105,7 @@ export default function SiteHeader() {
       <aside id="mobile-site-menu" className={open ? "mobile-menu open" : "mobile-menu"} aria-hidden={!open}>
         <div className="mobile-menu-head">
           <Link href="/" className="brand" onClick={() => setOpen(false)}>
-            <span className="brand-mark"><MessageCircle size={16} /></span>
+            <span className="brand-mark"><img src="/favicon.ico" alt="" /></span>
             <span>PROSPECT</span>
           </Link>
           <button type="button" className="topbar-menu-btn" onClick={() => setOpen(false)} aria-label="Close menu">

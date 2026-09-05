@@ -408,6 +408,12 @@ body{min-height:100vh;color:var(--ink)}
   transform:translateY(-1px);
   color:var(--primary-hover);
 }
+.brand-mark img{
+  display:block;
+  width:100%;
+  height:100%;
+  object-fit:contain;
+}
 .brand-mark{
   width:32px;
   height:32px;
