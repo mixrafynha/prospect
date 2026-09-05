@@ -3531,10 +3531,23 @@ button,input,select,textarea{max-width:100%}
   .lead-row,.mobile-card,.lead-actions button,.lead-links a,.lead-links button,.mobile-card-links a,.mobile-card-links button{transition:none;animation:none}
 }
 @media (max-width: 768px){
-  .mobile-card-top{grid-template-columns:42px minmax(0,1fr) auto;gap:8px}
+  .mobile-card{
+    width:100%;
+    max-width:100%;
+    box-sizing:border-box;
+    overflow:hidden;
+  }
+  .mobile-card-top{
+    width:100%;
+    min-width:0;
+    grid-template-columns:42px minmax(0,1fr) 68px !important;
+    gap:8px;
+  }
+  .mobile-card-top > *{min-width:0;max-width:100%}
+  .mobile-card-identity{overflow:hidden}
   .mobile-card-photo{width:42px;height:42px;border-radius:12px}
   .mobile-card-photo span{font-size:16px}
-  .mobile-priority{min-width:68px}
+  .mobile-priority{width:68px;min-width:0}
   .mobile-card-links{display:grid;grid-template-columns:repeat(3,minmax(0,1fr))}
 }
 
