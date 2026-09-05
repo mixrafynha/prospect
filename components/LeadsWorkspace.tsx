@@ -559,14 +559,14 @@ export default function LeadsWorkspace() {
             </div>
             <div className="filter-group">
               <strong>Website status</strong>
-              <button className={phoneFilter === "no-website" ? "filter-option active" : "filter-option"} onClick={() => setPhoneFilter("no-website")}>No website <span>3</span></button>
-              <button className={"filter-option"} onClick={() => setPhoneFilter("all")}>Weak website <span>4</span></button>
-              <button className={phoneFilter === "has-website" ? "filter-option active" : "filter-option"} onClick={() => setPhoneFilter("has-website")}>Good website <span>0</span></button>
+              <button className={phoneFilter === "no-website" ? "filter-option active" : "filter-option"} onClick={() => setPhoneFilter("no-website")}>No website <span>{stats.noWebsite}</span></button>
+              <button className={phoneFilter === "all" ? "filter-option active" : "filter-option"} onClick={() => setPhoneFilter("all")}>Weak website <span>{weakWebsiteCount}</span></button>
+              <button className={phoneFilter === "has-website" ? "filter-option active" : "filter-option"} onClick={() => setPhoneFilter("has-website")}>Good website <span>{goodWebsiteCount}</span></button>
             </div>
             <div className="filter-group">
               <strong>Phone priority</strong>
-              <button className={phoneFilter === "06-07" ? "filter-option active" : "filter-option"} onClick={() => setPhoneFilter("06-07")}>06/07 <span>5</span></button>
-              <button className={phoneFilter === "no-mobile" ? "filter-option active" : "filter-option"} onClick={() => setPhoneFilter("no-mobile")}>Other numbers <span>2</span></button>
+              <button className={phoneFilter === "06-07" ? "filter-option active" : "filter-option"} onClick={() => setPhoneFilter("06-07")}>06/07 <span>{stats.mobile}</span></button>
+              <button className={phoneFilter === "no-mobile" ? "filter-option active" : "filter-option"} onClick={() => setPhoneFilter("no-mobile")}>Other numbers <span>{Math.max(0, stats.total - stats.mobile)}</span></button>
             </div>
             <div className="filter-group">
               <strong>Rating</strong>
@@ -576,8 +576,8 @@ export default function LeadsWorkspace() {
             </div>
             <div className="filter-group">
               <strong>Open now</strong>
-              <button className={sortMode === "mobiles" ? "filter-option active" : "filter-option"} onClick={() => setSortMode("mobiles")}>Open now <span>3</span></button>
-              <button className={phoneFilter === "has-website" ? "filter-option active" : "filter-option"} onClick={() => setPhoneFilter("has-website")}>Photos available <span>6</span></button>
+              <button className={sortMode === "mobiles" ? "filter-option active" : "filter-option"} onClick={() => setSortMode("mobiles")}>Open now <span>{openNowCount}</span></button>
+              <button className={phoneFilter === "has-website" ? "filter-option active" : "filter-option"} onClick={() => setPhoneFilter("has-website")}>Photos available <span>{photosCount}</span></button>
             </div>
             <div className="filter-group">
               <button className="filter-clear" onClick={() => { setPhoneFilter("all"); setStatusFilter("all"); setSortMode("opportunity"); }}>
@@ -778,7 +778,9 @@ export default function LeadsWorkspace() {
                 <div className="mobile-card-top">
                   <div>
                     <h3>{lead.name}</h3>
+                    <p className="mobile-card-type">{lead.primaryType || "Local business"}</p>
                     <p>{lead.address}</p>
+                    <p className="mobile-card-distance"><MapPin size={13} /> {distanceLabel(lead)} from search</p>
                   </div>
                   <div className="opportunity-badge">{isContacted ? "CONTACTED" : lead.hasMobilePhone ? "HIGH" : "MEDIUM"}</div>
                 </div>
@@ -808,6 +810,11 @@ export default function LeadsWorkspace() {
                     <button className="ghost-link small" onClick={(e) => { e.stopPropagation(); openProspect(lead); }}><Sparkles size={13} /> Prospect</button>
                   ) : null}
                   <button className="ghost-link small" onClick={(e) => { e.stopPropagation(); setSelectedLead(lead); }}>View details</button>
+                </div>
+                <div className="mobile-card-links">
+                  {lead.maps ? <a href={lead.maps} target="_blank" rel="noreferrer" onClick={(e) => e.stopPropagation()}><MapPin size={13} /> Google Maps</a> : null}
+                  {lead.website ? <a href={lead.website} target="_blank" rel="noreferrer" onClick={(e) => e.stopPropagation()}><Globe size={13} /> Website</a> : null}
+                  <button onClick={(e) => { e.stopPropagation(); setSelectedLead(lead); }}><Eye size={13} /> Details</button>
                 </div>
               </article>
             );
