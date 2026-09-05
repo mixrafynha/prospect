@@ -769,6 +769,15 @@ export default function LeadsWorkspace() {
         </section>
 
         <section className="mobile-results">
+          {loading ? (
+            <div className="mobile-results-state">A procurar negócios...</div>
+          ) : null}
+          {!loading && filtered.length === 0 ? (
+            <div className="mobile-results-state">
+              <strong>Nenhum negócio encontrado.</strong>
+              <span>Tenta outra localização ou uma categoria mais ampla.</span>
+            </div>
+          ) : null}
           {filtered.map((lead, index) => {
             const primaryPhone = [...lead.phones].sort((a, b) => phonePriority(a) - phonePriority(b))[0];
             const normalizedPhone = primaryPhone?.normalizedE164 ? normalizeFrenchPhoneForSearch(primaryPhone.normalizedE164) : "";

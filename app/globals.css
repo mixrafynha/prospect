@@ -3330,5 +3330,113 @@ button,input,select,textarea{max-width:100%}
   .mobile-card .badge-chip{font-size:9px;padding:0 7px}
 }
 
+@media (max-width: 768px){
+  .search-hero{
+    gap:10px;
+    padding:14px 0 8px;
+  }
+  .search-hero .hero-copy h1{
+    font-size:clamp(34px,10vw,50px);
+    line-height:.92;
+  }
+  .search-hero .leadText,
+  .hero-support{
+    margin-top:10px;
+    font-size:14px;
+    line-height:1.4;
+  }
+  .hero-search-stack{gap:10px}
+  .hero-search-panel{
+    gap:7px;
+    padding:10px;
+  }
+  .hero-search-panel .search-field{gap:4px}
+  .hero-search-panel .search-field label{font-size:10px}
+  .hero-search-panel .input{
+    min-height:42px;
+    padding:0 12px;
+    font-size:14px;
+  }
+  .hero-search-button{
+    min-height:42px;
+    padding:0 12px;
+    font-size:13px;
+  }
+  .hero-metrics{
+    gap:5px;
+    margin-top:4px;
+  }
+  .hero-metrics span{
+    padding:6px 8px;
+    font-size:10px;
+  }
+  .results-shell{padding-top:6px}
+  .results-head{gap:8px}
+  .results-head-actions{gap:7px}
+  .results-head-actions .filters-toggle,
+  .results-head-actions .sort-select{
+    min-height:38px;
+    padding:0 9px;
+    font-size:12px;
+  }
+  .mobile-results{
+    margin-top:10px;
+    gap:9px;
+  }
+  .mobile-card{
+    gap:11px;
+    padding:13px;
+  }
+  .mobile-contact{
+    padding:8px;
+  }
+  .mobile-contact .phone-main,
+  .mobile-contact .button,
+  .mobile-contact .ghost-link{
+    min-height:36px;
+    padding:0 9px;
+    font-size:11px;
+  }
+  .mobile-card-links{
+    gap:5px;
+  }
+  .mobile-card-links a,
+  .mobile-card-links button{
+    min-height:31px;
+    padding:0 7px;
+    font-size:10px;
+  }
+  .bottom-actions{margin-top:12px}
+  .bottom-actions .button{
+    min-height:38px;
+    font-size:11px;
+  }
+}
+
+@media (max-width: 768px){
+  .results-shell{
+    min-height:0 !important;
+  }
+  .results-shell .results-list{
+    display:none !important;
+  }
+  .mobile-results-state{
+    display:grid;
+    gap:5px;
+    padding:18px 14px;
+    border:1px dashed #cbd5e1;
+    border-radius:14px;
+    background:rgba(255,255,255,.62);
+    color:#667085;
+    font-size:12px;
+    line-height:1.4;
+    text-align:center;
+  }
+  .mobile-results-state strong{
+    color:var(--ink);
+    font-size:14px;
+  }
+}
+
 
 
