@@ -3538,5 +3538,35 @@ button,input,select,textarea{max-width:100%}
   .mobile-card-links{display:grid;grid-template-columns:repeat(3,minmax(0,1fr))}
 }
 
+/* Keep the lead workspace editorial and structured instead of overly pill-shaped. */
+.lead-row,
+.mobile-card{
+  border-radius:5px !important;
+}
+.lead-photo,
+.mobile-card-photo{
+  border-radius:5px !important;
+}
+.lead-row .button,
+.lead-row button,
+.lead-row a,
+.mobile-card .button,
+.mobile-card button,
+.mobile-card a,
+.filters-toggle,
+.sort-select{
+  border-radius:4px !important;
+}
+.lead-row .badge-chip,
+.mobile-card .badge-chip,
+.lead-row .opportunity-badge,
+.mobile-card .opportunity-badge,
+.mobile-priority{
+  border-radius:3px !important;
+}
+.mobile-results-state{
+  border-radius:5px !important;
+}
+
 
 
