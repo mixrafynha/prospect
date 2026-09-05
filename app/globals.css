@@ -3122,5 +3122,63 @@ button,input,select,textarea{max-width:100%}
   .bottom-actions{grid-template-columns:1fr}
 }
 
+/* Final overflow guard for lead cards at desktop, tablet and mobile widths. */
+.lead-row,
+.lead-row-grid,
+.lead-col,
+.lead-col-identity,
+.lead-col-info,
+.lead-col-actions,
+.lead-main-title,
+.lead-priority-block{
+  min-width:0 !important;
+  max-width:100%;
+}
+.lead-row{overflow:hidden}
+.lead-phone,
+.lead-phone-label,
+.lead-phone-priority{
+  max-width:100%;
+  overflow:hidden;
+  text-overflow:ellipsis;
+}
+.lead-phone{box-sizing:border-box}
+
+@media (min-width: 1200px){
+  .lead-row-grid{
+    grid-template-columns:minmax(240px,1.15fr) minmax(210px,.9fr) minmax(245px,1fr) !important;
+    gap:16px !important;
+  }
+  .lead-col-actions{min-width:0 !important}
+}
+
+@media (min-width: 769px) and (max-width: 1199px){
+  .lead-row-grid{
+    display:grid !important;
+    grid-template-columns:minmax(0,1.2fr) minmax(220px,.85fr) !important;
+    gap:16px !important;
+  }
+  .lead-col-actions{
+    grid-column:1/-1;
+    display:grid !important;
+    grid-template-columns:minmax(180px,1fr) auto;
+    align-items:center;
+    gap:12px !important;
+  }
+  .lead-priority-block{align-items:flex-start !important}
+  .lead-actions,.lead-links{justify-content:flex-end !important}
+}
+
+@media (max-width: 768px){
+  .mobile-card{overflow:hidden;min-width:0}
+  .mobile-card-top > div:first-child{min-width:0;max-width:100%}
+  .mobile-card-top h3,
+  .mobile-card-top p{overflow-wrap:anywhere;word-break:normal}
+  .mobile-card .opportunity-badge{max-width:100%;overflow:hidden;text-overflow:ellipsis}
+  .mobile-card-links{min-width:0}
+  .mobile-card-links a,
+  .mobile-card-links button{min-width:0;max-width:100%;overflow:hidden;text-overflow:ellipsis;white-space:nowrap}
+}
+
 
 
