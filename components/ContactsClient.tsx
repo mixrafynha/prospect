@@ -2,6 +2,7 @@
 
 import { useEffect, useMemo, useState } from "react";
 import SiteHeader from "@/components/SiteHeader";
+import ContactMap, { type ContactMapItem } from "@/components/ContactMap";
 import { getFrenchPhoneVariants, loadOutreachHistory, normalizeFrenchPhoneForSearch, updateOutreachStatus, type OutreachHistoryItem, type OutreachStatus } from "@/lib/leads/outreachHistory";
 
 const statusOptions: Array<{ value: OutreachStatus; label: string }> = [
@@ -26,9 +27,17 @@ export default function ContactsClient() {
   const [status, setStatus] = useState<"all" | OutreachStatus>("all");
   const [items, setItems] = useState<OutreachHistoryItem[]>([]);
   const [mounted, setMounted] = useState(false);
+  const [sessionLeads, setSessionLeads] = useState<Array<{ placeId?: string | null; name?: string; address?: string; phones?: Array<{ normalizedE164?: string | null }>; location?: { latitude?: number | null; longitude?: number | null } | null }>>([]);
 
   useEffect(() => {
     setItems(loadOutreachHistory());
+    try {
+      const raw = sessionStorage.getItem("leads-workspace-session-v1");
+      const parsed = raw ? JSON.parse(raw) : null;
+      setSessionLeads(Array.isArray(parsed?.leads) ? parsed.leads : []);
+    } catch {
+      setSessionLeads([]);
+    }
     setMounted(true);
   }, []);
 
@@ -58,6 +67,28 @@ export default function ContactsClient() {
     interested: items.filter((item) => item.status === "interested").length,
     client: items.filter((item) => item.status === "client").length,
   }), [items]);
+
+  const mapItems = useMemo<ContactMapItem[]>(() => {
+    return items.flatMap((item) => {
+      const matchingLead = sessionLeads.find((lead) => {
+        if (lead.placeId && lead.placeId === item.leadId) return true;
+        return lead.phones?.some((phone) => phone.normalizedE164 && phone.normalizedE164 === item.normalizedPhone);
+      });
+      const latitude = item.latitude ?? matchingLead?.location?.latitude;
+      const longitude = item.longitude ?? matchingLead?.location?.longitude;
+      if (typeof latitude !== "number" || typeof longitude !== "number") return [];
+      return [{
+        id: item.id,
+        companyName: item.companyName,
+        location: item.location,
+        phone: item.phone,
+        website: item.website,
+        status: statusLabel(item.status),
+        latitude,
+        longitude,
+      }];
+    });
+  }, [items, sessionLeads]);
 
   function handleStatusChange(item: OutreachHistoryItem, nextStatus: OutreachStatus) {
     updateOutreachStatus(item.id, nextStatus);
@@ -98,6 +129,17 @@ export default function ContactsClient() {
         </section>
 
         <section className="results-section compact">
+          <div className="contact-map-shell">
+            <div className="toolbar small-toolbar">
+              <div>
+                <h2>Mapa de contactos</h2>
+                <p className="muted">Pins vermelhos mostram empresas já contactadas. Clique num pin para abrir a localização exata.</p>
+              </div>
+              <span className="badge-chip">{mapItems.length} no mapa</span>
+            </div>
+            <ContactMap items={mapItems} />
+            {mounted && mapItems.length < items.length ? <p className="muted contact-map-note">{items.length - mapItems.length} contacto(s) ainda sem coordenadas guardadas.</p> : null}
+          </div>
           <div className="contact-list-shell">
             <div className="toolbar small-toolbar">
               <div>

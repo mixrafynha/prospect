@@ -1196,6 +1196,16 @@ table{display:block;overflow-x:auto;-webkit-overflow-scrolling:touch}
 .contact-history-message{margin-top:12px}
 .contact-history-message p{margin:0;color:var(--ink)}
 .contact-history-actions{margin-top:12px;max-width:260px}
+.contact-map-shell{margin-bottom:24px;padding:18px;border:1px solid var(--line);background:var(--surface);border-radius:14px;box-shadow:var(--shadow-md)}
+.contact-map{height:460px;width:100%;border-radius:12px;overflow:hidden;border:1px solid var(--line);background:#e8eef1}
+.contact-map-pin-wrap{background:transparent;border:0}
+.contact-map-pin{display:block;width:20px;height:20px;border-radius:50% 50% 50% 0;background:#dc2626;border:3px solid #fff;box-shadow:0 3px 10px rgba(127,29,29,.42);transform:rotate(-45deg)}
+.contact-map-popup{display:grid;gap:5px;min-width:180px;font-size:12px;line-height:1.35}
+.contact-map-popup strong{font-size:14px;color:var(--ink)}
+.contact-map-popup span{color:var(--muted)}
+.contact-map-popup a{color:var(--gold-dark);font-weight:800}
+.contact-map-status{font-weight:800}
+.contact-map-note{margin:10px 0 0;font-size:12px}
 .status-pill-contacted{display:inline-flex;align-items:center;padding:6px 10px;border:1px solid var(--line);color:var(--muted);text-transform:uppercase;font-size:11px;letter-spacing:.08em}
 .contact-meta{margin-top:6px}
 .prospect-summary{grid-template-columns:repeat(2,minmax(0,1fr))}

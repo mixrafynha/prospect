@@ -11,6 +11,8 @@
     "clean": "node -e \"const fs=require('fs'); for (const p of ['.next','tsconfig.tsbuildinfo']) fs.rmSync(p,{recursive:true,force:true})\""
   },
   "dependencies": {
+    "@types/leaflet": "^1.9.22",
+    "leaflet": "^1.9.4",
     "libphonenumber-js": "^1.13.11",
     "lucide-react": "^0.468.0",
     "next": "^16.3.4",

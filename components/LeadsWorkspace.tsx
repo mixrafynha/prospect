@@ -356,6 +356,8 @@ export default function LeadsWorkspace() {
         phone: phone.normalizedE164,
         website: lead.website,
         location: lead.address,
+        latitude: lead.location?.latitude ?? null,
+        longitude: lead.location?.longitude ?? null,
         leadStatus: "contacted",
       },
       { phone: phone.normalizedE164, message }
