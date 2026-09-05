@@ -3109,6 +3109,162 @@ button,input,select,textarea{max-width:100%}
   }
 }
 
+/* Mobile SMS sheet: keep it isolated from the lead list behind it. */
+.prospect-panel.mobile{
+  position:fixed !important;
+  left:0 !important;
+  right:0 !important;
+  bottom:0 !important;
+  z-index:200 !important;
+  display:block !important;
+  width:100% !important;
+  max-height:min(90vh,760px) !important;
+  overflow-y:auto !important;
+  overflow-x:hidden !important;
+  padding:14px 14px 24px !important;
+  border:1px solid #d0d5dd !important;
+  border-bottom:0 !important;
+  border-radius:14px 14px 0 0 !important;
+  background:#fff !important;
+  box-shadow:0 -18px 50px rgba(16,24,40,.24) !important;
+  color:var(--ink) !important;
+}
+.prospect-panel.mobile::before{
+  content:"";
+  position:fixed;
+  z-index:-1;
+  inset:0;
+  background:rgba(16,24,40,.28);
+  pointer-events:none;
+}
+.prospect-panel.mobile .drawer-head{
+  position:sticky;
+  top:-14px;
+  z-index:2;
+  display:flex;
+  align-items:center;
+  justify-content:space-between;
+  gap:12px;
+  margin:0 -14px 14px;
+  padding:14px;
+  border-bottom:1px solid #eaecf0;
+  background:#fff;
+}
+.prospect-panel.mobile .drawer-head h2{
+  margin:3px 0 0;
+  max-width:22ch;
+  font-size:22px;
+  line-height:1.05;
+}
+.prospect-panel.mobile .drawer-head .ghost-link{
+  flex:0 0 auto;
+  width:auto;
+  min-height:34px;
+  padding:0 10px;
+  border:1px solid #98a2b3;
+  border-radius:4px;
+  background:#fff;
+  color:#344054;
+  font-weight:900;
+}
+.prospect-panel.mobile .prospect-grid{
+  display:block !important;
+}
+.prospect-panel.mobile .prospect-summary{
+  display:grid;
+  grid-template-columns:repeat(2,minmax(0,1fr));
+  gap:6px;
+  margin-bottom:12px;
+}
+.prospect-panel.mobile .prospect-summary > div{
+  min-width:0;
+  padding:9px 10px;
+  border:1px solid #eaecf0;
+  border-radius:4px;
+  background:#f8fafc;
+}
+.prospect-panel.mobile .prospect-summary strong{
+  margin-bottom:4px;
+  font-size:9px;
+  letter-spacing:.1em;
+}
+.prospect-panel.mobile .prospect-summary span{
+  display:block;
+  overflow:hidden;
+  text-overflow:ellipsis;
+  white-space:nowrap;
+  font-size:12px;
+  color:#344054;
+}
+.prospect-panel.mobile .prospect-message{
+  display:grid;
+  gap:8px;
+  padding:12px;
+  border:1px solid #d0d5dd;
+  border-radius:5px;
+  background:#fff;
+}
+.prospect-panel.mobile .prospect-message label{
+  font-size:10px;
+  font-weight:900;
+  letter-spacing:.1em;
+}
+.prospect-panel.mobile .message-variants{
+  margin:0;
+  padding:9px;
+  border:1px solid #eaecf0;
+  border-radius:4px;
+  background:#f8fafc;
+}
+.prospect-panel.mobile .message-variants-head{
+  display:block;
+  margin-bottom:8px;
+}
+.prospect-panel.mobile .message-variants-head strong,
+.prospect-panel.mobile .message-variants-head span{
+  display:block;
+}
+.prospect-panel.mobile .message-variants-head span{margin-top:3px;font-size:10px}
+.prospect-panel.mobile .message-variant-list{grid-template-columns:1fr;gap:6px}
+.prospect-panel.mobile .message-variant{
+  min-width:0;
+  padding:9px;
+  border-radius:4px;
+  background:#fff;
+}
+.prospect-panel.mobile .prospect-textarea{
+  min-height:112px;
+  width:100%;
+  padding:10px;
+  border:1px solid #98a2b3;
+  border-radius:4px;
+  font-size:12px;
+  line-height:1.45;
+  resize:vertical;
+}
+.prospect-panel.mobile .prospect-actions{
+  display:grid;
+  grid-template-columns:repeat(2,minmax(0,1fr));
+  gap:6px;
+}
+.prospect-panel.mobile .prospect-actions .button{
+  width:100%;
+  min-height:36px;
+  padding:0 7px;
+  border-radius:4px;
+  font-size:10px;
+}
+.prospect-panel.mobile .prospect-actions .button:last-child{
+  grid-column:1/-1;
+  background:#155eef;
+  color:#fff;
+}
+@media (max-width:420px){
+  .prospect-panel.mobile .prospect-summary{grid-template-columns:1fr 1fr}
+  .prospect-panel.mobile{padding-left:10px !important;padding-right:10px !important}
+  .prospect-panel.mobile .drawer-head{margin-left:-10px;margin-right:-10px;padding-left:10px;padding-right:10px}
+}
+
 @media (max-width: 420px){
   .workspace{padding-left:10px;padding-right:10px}
   .hero-metrics{grid-template-columns:1fr}
@@ -3579,6 +3735,110 @@ button,input,select,textarea{max-width:100%}
 }
 .mobile-results-state{
   border-radius:5px !important;
+}
+
+/* Commercial action hierarchy: one clear conversion action, quieter utilities. */
+.lead-row{
+  padding:18px !important;
+  border:1px solid #e4e7ec !important;
+  border-left:4px solid #d0d5dd !important;
+  background:#fff !important;
+}
+.lead-row.contacted{border-left-color:#ef4444 !important}
+.lead-row-grid{gap:18px !important}
+.lead-col-info,
+.lead-col-actions{padding:12px;border:1px solid #edf0f4;background:#fbfcfe}
+.lead-col-info{align-self:stretch}
+.lead-priority-block{gap:6px !important}
+.lead-phone-label{font-size:9px;letter-spacing:.1em;color:#667085}
+.lead-phone{
+  min-height:42px !important;
+  width:100%;
+  justify-content:center;
+  border:1px solid #b7ebc9 !important;
+  background:#ecfdf3 !important;
+  color:#087443 !important;
+  border-radius:4px !important;
+  font-weight:900;
+}
+.lead-phone-priority{font-size:10px;color:#667085}
+.lead-actions{gap:7px !important}
+.lead-actions .view-btn{
+  min-height:38px;
+  flex:1;
+  justify-content:center;
+  background:#155eef !important;
+  color:#fff !important;
+  border-color:#155eef !important;
+  font-weight:900;
+}
+.lead-actions .bookmark-btn{min-width:38px;min-height:38px}
+.lead-links{gap:6px !important;margin-top:2px}
+.lead-links a,
+.lead-links button{min-height:30px !important;padding:0 8px !important;font-size:10px !important}
+.lead-row .lead-meta-line{gap:6px}
+.lead-row .lead-rating{font-weight:900;color:#101828}
+
+@media (max-width: 768px){
+  .mobile-card{
+    gap:12px !important;
+    padding:14px !important;
+    border:1px solid #e4e7ec !important;
+    border-left:4px solid #d0d5dd !important;
+    box-shadow:0 8px 22px rgba(16,24,40,.06) !important;
+  }
+  .mobile-card.contacted{border-left-color:#ef4444 !important}
+  .mobile-card .badge-row{
+    padding:8px 0;
+    border-top:1px solid #eef1f4;
+    border-bottom:1px solid #eef1f4;
+    gap:5px;
+  }
+  .mobile-card .badge-chip{
+    min-height:24px;
+    padding:0 7px;
+    border-radius:3px !important;
+    background:#f8fafc;
+    font-size:10px;
+  }
+  .mobile-contact{
+    grid-template-columns:minmax(0,1fr) minmax(0,1fr) !important;
+    gap:6px !important;
+    padding:0 !important;
+    background:transparent !important;
+    border:0 !important;
+  }
+  .mobile-contact .phone-main{
+    grid-column:1/-1;
+    min-height:38px !important;
+    padding:0 10px !important;
+    border:1px solid #b7ebc9 !important;
+    border-radius:4px !important;
+    background:#ecfdf3 !important;
+    color:#087443 !important;
+    font-size:12px !important;
+    font-weight:900;
+  }
+  .mobile-contact .sms-quick,
+  .mobile-contact .ghost-link{
+    width:100% !important;
+    min-height:36px !important;
+    padding:0 8px !important;
+    border-radius:4px !important;
+    font-size:11px !important;
+    font-weight:900;
+  }
+  .mobile-contact .sms-quick{background:#155eef !important;color:#fff !important}
+  .mobile-contact .ghost-link{border:1px solid #98a2b3;background:#fff;color:#344054}
+  .mobile-card-links{gap:5px !important;padding-top:9px !important}
+  .mobile-card-links a,
+  .mobile-card-links button{
+    min-height:29px !important;
+    padding:0 5px !important;
+    border-radius:3px !important;
+    font-size:10px !important;
+    background:#fff;
+  }
 }
 
 
