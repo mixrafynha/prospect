@@ -15,6 +15,7 @@ type GooglePlace = {
   formattedAddress?: string;
   websiteUri?: string;
   googleMapsUri?: string;
+  photos?: Array<{ name?: string }>;
   rating?: number;
   userRatingCount?: number;
   nationalPhoneNumber?: string;
@@ -148,7 +149,7 @@ async function searchPage(query: string, location: ResolvedLocation | null, page
       "Content-Type": "application/json",
       "X-Goog-Api-Key": GOOGLE_API_KEY,
       "X-Goog-FieldMask":
-        "places.id,places.displayName,places.formattedAddress,places.websiteUri,places.googleMapsUri,places.rating,places.userRatingCount,places.nationalPhoneNumber,places.internationalPhoneNumber,places.businessStatus,places.primaryType,places.types,places.location,nextPageToken",
+        "places.id,places.displayName,places.formattedAddress,places.websiteUri,places.googleMapsUri,places.photos,places.rating,places.userRatingCount,places.nationalPhoneNumber,places.internationalPhoneNumber,places.businessStatus,places.primaryType,places.types,places.location,nextPageToken",
     },
     body: JSON.stringify({
       textQuery: query,
@@ -628,6 +629,7 @@ export async function POST(request: Request) {
         websiteFinal,
         websiteMismatch,
         maps: place.googleMapsUri || "",
+        photoName: place.photos?.[0]?.name || null,
         businessStatus: place.businessStatus || null,
         primaryType: place.primaryType || null,
         types: place.types || [],

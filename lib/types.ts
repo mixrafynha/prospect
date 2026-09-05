@@ -37,6 +37,7 @@ export type Lead = Metrics & {
   websiteFinal?: string | null;
   websiteMismatch?: boolean;
   maps: string;
+  photoName?: string | null;
   businessStatus: string | null;
   primaryType: string | null;
   types: string[];

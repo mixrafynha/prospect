@@ -42,6 +42,10 @@ function leadHasMobile(lead: Lead) {
   return leadHas06(lead) || leadHas07(lead);
 }
 
+function leadPhotoUrl(lead: Lead) {
+  return lead.photoName ? `/api/place-photo?name=${encodeURIComponent(lead.photoName)}` : null;
+}
+
 type LeadStatus = "new" | "viewed" | "contacted";
 
 function loadLeadStatus() {
@@ -636,6 +640,9 @@ export default function LeadsWorkspace() {
                 <Reveal key={`${lead.placeId || lead.name}-${index}`} delay={Math.min(index * 24, 120)}>
                   <article className={`${selectedLead?.placeId === lead.placeId ? "lead-row active" : "lead-row"} ${leadStatusClass(status)} ${isContacted ? "contacted" : ""}`} onClick={() => setSelectedLead(lead)}>
                     <div className="lead-row-grid">
+                      <div className="lead-photo" aria-hidden="true">
+                        {leadPhotoUrl(lead) ? <img src={leadPhotoUrl(lead) || undefined} alt="" loading="lazy" /> : <span>{lead.name.slice(0, 1).toUpperCase()}</span>}
+                      </div>
                       <div className="lead-col lead-col-identity">
                         <div className="lead-rank">
                           <span>{index + 1}</span>
@@ -785,6 +792,9 @@ export default function LeadsWorkspace() {
             return (
               <article key={`${lead.placeId || lead.name}-mobile`} className={`${selectedLead?.placeId === lead.placeId ? "mobile-card active" : "mobile-card"} ${leadStatusClass(leadStatusMap[leadKey(lead)] || "new")} ${isContacted ? "contacted" : ""}`} onClick={() => setSelectedLead(lead)}>
                 <div className="mobile-card-top">
+                  <div className="mobile-card-photo" aria-hidden="true">
+                    {leadPhotoUrl(lead) ? <img src={leadPhotoUrl(lead) || undefined} alt="" loading="lazy" /> : <span>{lead.name.slice(0, 1).toUpperCase()}</span>}
+                  </div>
                   <div className="mobile-card-identity">
                     <span className="mobile-card-rank">{index + 1}</span>
                     <div className="mobile-card-copy">
