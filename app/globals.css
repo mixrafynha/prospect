@@ -1206,6 +1206,16 @@ table{display:block;overflow-x:auto;-webkit-overflow-scrolling:touch}
 .contact-map-popup a{color:var(--gold-dark);font-weight:800}
 .contact-map-status{font-weight:800}
 .contact-map-note{margin:10px 0 0;font-size:12px}
+.message-variants{margin:12px 0 14px;padding:12px;border:1px solid var(--line);border-radius:14px;background:rgba(255,255,255,.42)}
+.message-variants-head{display:flex;justify-content:space-between;gap:12px;align-items:baseline;margin-bottom:9px}
+.message-variants-head strong{font-size:13px}
+.message-variants-head span{color:var(--muted);font-size:11px}
+.message-variant-list{display:grid;grid-template-columns:repeat(2,minmax(0,1fr));gap:8px}
+.message-variant{display:grid;gap:4px;text-align:left;padding:11px;border:1px solid var(--line);border-radius:11px;background:rgba(255,255,255,.7);color:var(--ink);cursor:pointer}
+.message-variant:hover,.message-variant.active{border-color:var(--gold-dark);box-shadow:0 0 0 2px rgba(180,83,9,.1)}
+.message-variant-title{font-size:12px;font-weight:950}
+.message-variant-objective{color:var(--muted);font-size:10px;font-weight:750}
+.message-variant-preview{display:-webkit-box;overflow:hidden;color:var(--muted);font-size:11px;line-height:1.35;-webkit-box-orient:vertical;-webkit-line-clamp:3}
 .status-pill-contacted{display:inline-flex;align-items:center;padding:6px 10px;border:1px solid var(--line);color:var(--muted);text-transform:uppercase;font-size:11px;letter-spacing:.08em}
 .contact-meta{margin-top:6px}
 .prospect-summary{grid-template-columns:repeat(2,minmax(0,1fr))}

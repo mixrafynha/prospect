@@ -5,7 +5,7 @@ import { useEffect, useMemo, useState } from "react";
 import SiteHeader from "@/components/SiteHeader";
 import Reveal from "@/components/Reveal";
 import type { Lead, PhoneNumberData } from "@/lib/types";
-import { buildSmsHref, buildSmsLink, buildSmsMessage } from "@/lib/smsTemplate";
+import { buildSmsHref, buildSmsLink, buildSmsMessage, buildSmsMessageVariants, type SmsMessageVariant } from "@/lib/smsTemplate";
 import SmsQr from "@/components/SmsQr";
 import { getFrenchPhoneVariants, loadOutreachHistory, normalizeFrenchPhoneForSearch, upsertOutreachContact, updateOutreachStatus, type OutreachHistoryItem } from "@/lib/leads/outreachHistory";
 
@@ -149,6 +149,7 @@ export default function LeadsWorkspace() {
   const [leadStatusMap, setLeadStatusMap] = useState<Record<string, LeadStatus>>({});
   const [smsLead, setSmsLead] = useState<Lead | null>(null);
   const [smsMessage, setSmsMessage] = useState("");
+  const [smsVariantId, setSmsVariantId] = useState("");
   const [messageCopied, setMessageCopied] = useState(false);
   const [numberCopied, setNumberCopied] = useState(false);
   const [isDesktop, setIsDesktop] = useState(true);
@@ -343,10 +344,12 @@ export default function LeadsWorkspace() {
   function openProspect(lead: Lead) {
     setSelectedLead(lead);
     setSmsLead(lead);
-    setSmsMessage(buildSmsMessage(lead));
+    const firstVariant = buildSmsMessageVariants(lead)[0];
+    setSmsVariantId(firstVariant?.id || "");
+    setSmsMessage(firstVariant?.text || buildSmsMessage(lead));
   }
 
-  function markContactedBySms(lead: Lead, message: string) {
+  function markContactedBySms(lead: Lead, message: string, variantId = smsVariantId) {
     const phone = primaryPhoneForLead(lead);
     if (!phone?.normalizedE164) return;
     upsertOutreachContact(
@@ -360,7 +363,7 @@ export default function LeadsWorkspace() {
         longitude: lead.location?.longitude ?? null,
         leadStatus: "contacted",
       },
-      { phone: phone.normalizedE164, message }
+      { phone: phone.normalizedE164, message, variantId: variantId || "custom" }
     );
     refreshOutreachItems();
   }
@@ -398,7 +401,8 @@ export default function LeadsWorkspace() {
       const proceed = window.confirm(`Déjà contacté le ${new Date(existing.contactAt).toLocaleDateString("fr-FR")}. Continuer quand même ?`);
       if (!proceed) return false;
     }
-    markContactedBySms(lead, message);
+    const selectedVariantId = buildSmsMessageVariants(lead).find((variant) => variant.text === message)?.id || smsVariantId || "custom";
+    markContactedBySms(lead, message, selectedVariantId);
 
     const smsWithBody = buildSmsLink(phone.normalizedE164, message, { includeBody: true });
     const smsWithoutBody = buildSmsLink(phone.normalizedE164, message, { includeBody: false });
@@ -448,7 +452,15 @@ export default function LeadsWorkspace() {
     updateLeadStatus(nextLead, leadStatusMap[leadKey(nextLead)] === "contacted" ? "contacted" : "viewed");
     setSelectedLead(nextLead);
     setSmsLead(nextLead);
-    setSmsMessage(buildSmsMessage(nextLead));
+    const firstVariant = buildSmsMessageVariants(nextLead)[0];
+    setSmsVariantId(firstVariant?.id || "");
+    setSmsMessage(firstVariant?.text || buildSmsMessage(nextLead));
+  }
+
+  function selectSmsVariant(variant: SmsMessageVariant) {
+    setSmsVariantId(variant.id);
+    setSmsMessage(variant.text);
+    setMessageCopied(false);
   }
 
   function changeOutreachStatus(lead: Lead, status: "replied" | "interested" | "client" | "not_interested") {
@@ -826,11 +838,34 @@ export default function LeadsWorkspace() {
               </div>
               <div className="prospect-message">
                 <label htmlFor="sms-message">Message</label>
+                <div className="message-variants" aria-label="Variantes de mensagem">
+                  <div className="message-variants-head">
+                    <strong>Escolher uma abordagem</strong>
+                    <span>{smsVariantId === "custom" ? "Personalizada" : "Clica numa opção para testar"}</span>
+                  </div>
+                  <div className="message-variant-list">
+                    {buildSmsMessageVariants(smsLead).map((variant) => (
+                      <button
+                        type="button"
+                        key={variant.id}
+                        className={smsVariantId === variant.id ? "message-variant active" : "message-variant"}
+                        onClick={() => selectSmsVariant(variant)}
+                      >
+                        <span className="message-variant-title">{variant.label}</span>
+                        <span className="message-variant-objective">{variant.objective}</span>
+                        <span className="message-variant-preview">{variant.text}</span>
+                      </button>
+                    ))}
+                  </div>
+                </div>
                 <textarea
                   id="sms-message"
                   className="textarea prospect-textarea"
                   value={smsMessage}
-                  onChange={(event) => setSmsMessage(event.target.value)}
+                  onChange={(event) => {
+                    setSmsVariantId("custom");
+                    setSmsMessage(event.target.value);
+                  }}
                 />
                 <div className="char-count">{smsMessage.length} characters</div>
                 <div className="prospect-actions">
@@ -847,6 +882,7 @@ export default function LeadsWorkspace() {
                         if (!phone?.normalizedE164) return;
                         updateLeadStatus(smsLead, "contacted");
                         if (isDesktop) {
+                          markContactedBySms(smsLead, smsMessage);
                           window.open(buildSmsHref(phone.normalizedE164, smsMessage), "_blank", "noopener,noreferrer");
                           return;
                         }

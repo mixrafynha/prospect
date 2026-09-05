@@ -22,6 +22,7 @@ export type OutreachHistoryItem = {
   latitude?: number | null;
   longitude?: number | null;
   preparedMessage: string;
+  messageVariantId?: string;
   contactAt: string;
   status: OutreachStatus;
   leadStatus?: LeadStatus;
@@ -130,7 +131,7 @@ export function upsertOutreachContact(lead: {
   latitude?: number | null;
   longitude?: number | null;
   leadStatus?: LeadStatus;
-}, payload: { phone: string; message: string }) {
+}, payload: { phone: string; message: string; variantId?: string }) {
   const normalizedPhone = normalizeFrenchPhoneForSearch(payload.phone);
   const now = new Date().toISOString();
   const items = storageRead();
@@ -150,6 +151,7 @@ export function upsertOutreachContact(lead: {
     latitude: lead.latitude ?? current?.latitude ?? null,
     longitude: lead.longitude ?? current?.longitude ?? null,
     preparedMessage: payload.message,
+    messageVariantId: payload.variantId || current?.messageVariantId,
     contactAt: current?.contactAt || now,
     status: current?.status || "contacted",
     leadStatus: current?.leadStatus || lead.leadStatus || "contacted",
