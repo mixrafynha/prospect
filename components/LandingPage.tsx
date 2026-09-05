@@ -96,7 +96,7 @@ export default function LandingPage() {
               src="/landing-showcase.webp"
               alt="Prospecting dashboard preview"
               fill
-              priority
+              loading="lazy"
               className="showcase-image"
               sizes="(max-width: 900px) 100vw, 92vw"
             />
